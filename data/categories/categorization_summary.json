@@ -1,0 +1,23 @@
+{
+  "categorization_methods": {
+    "keyword_based": {
+      "categories": {
+        "Implementation Issues": 21,
+        "Library Usage": 24
+      },
+      "total_posts": 45
+    },
+    "task_based": {
+      "categories": {},
+      "total_posts": 0
+    },
+    "library_based": {
+      "categories": {
+        "NLTK": 20
+      },
+      "total_posts": 20
+    }
+  },
+  "total_categorized_posts": 40,
+  "total_unique_posts": 40
+}

@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}About - NLP Knowledge Base{% endblock %}
+
+{% block content %}
+<!-- About Banner -->
+<section class="bg-primary-light py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-3"><i class="fas fa-info-circle me-2"></i>About the Project</h1>
+                <p class="lead mb-0">Learn about the NLP Knowledge Base project, its purpose, methodology, and features.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-home me-1"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2 class="mb-4">Project Overview</h2>
+                        <p>The <strong>NLP Knowledge Base</strong> is a comprehensive repository of Natural Language Processing (NLP) questions, answers, and insights collected from the Stack Exchange network. This project aims to organize this valuable knowledge into a structured, searchable database that helps researchers, students, and practitioners in the field of NLP.</p>
+                        
+                        <h3 class="mt-4">Objectives</h3>
+                        <ul>
+                            <li>Collect and organize NLP-related questions and answers from Stack Overflow</li>
+                            <li>Categorize posts using multiple classification schemes</li>
+                            <li>Provide data visualizations to reveal trends and patterns in the NLP community</li>
+                            <li>Create a user-friendly interface for exploring the knowledge base</li>
+                            <li>Facilitate learning and problem-solving in the NLP domain</li>
+                        </ul>
+                        
+                        <h3 class="mt-4">Data Collection Methodology</h3>
+                        <p>The data collection process involves the following steps:</p>
+                        <ol>
+                            <li><strong>API Integration</strong>: Utilizing the Stack Exchange API to retrieve questions tagged with NLP-related keywords</li>
+                            <li><strong>Data Processing</strong>: Cleaning, formatting, and pre-processing the retrieved data</li>
+                            <li><strong>Text Analysis</strong>: Applying NLP techniques to analyze the content of questions and answers</li>
+                            <li><strong>Categorization</strong>: Classifying posts based on keywords, tasks, question types, and libraries mentioned</li>
+                            <li><strong>Visualization</strong>: Creating charts and visualizations to represent the data</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2 class="mb-4">Features and Functionality</h2>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-folder-open fa-2x text-primary"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h4>Multi-faceted Categorization</h4>
+                                        <p>Posts are categorized using four different classification schemes to provide multiple perspectives on the data.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-search fa-2x text-primary"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h4>Advanced Search</h4>
+                                        <p>Full-text search capabilities allow you to find exactly what you're looking for within the knowledge base.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-chart-bar fa-2x text-primary"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h4>Data Visualizations</h4>
+                                        <p>Interactive visualizations help you understand trends, patterns, and relationships within the NLP field.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-code fa-2x text-primary"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h4>Code Syntax Highlighting</h4>
+                                        <p>Code snippets are displayed with syntax highlighting for improved readability and understanding.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Technical Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <h5>Built With</h5>
+                        <ul>
+                            <li><strong>Backend</strong>: Python, Flask</li>
+                            <li><strong>Frontend</strong>: HTML, CSS, JavaScript, Bootstrap 5</li>
+                            <li><strong>Data Processing</strong>: Pandas, NLTK</li>
+                            <li><strong>Visualizations</strong>: Matplotlib, Seaborn</li>
+                            <li><strong>API Integration</strong>: Stack Exchange API</li>
+                        </ul>
+                        
+                        <h5 class="mt-4">Project Structure</h5>
+                        <ul>
+                            <li><strong>Data Collection Pipeline</strong>: Scripts for retrieving and processing data</li>
+                            <li><strong>Web Application</strong>: Flask-based interface for exploring the knowledge base</li>
+                            <li><strong>Visualization Engine</strong>: Components for generating data visualizations</li>
+                            <li><strong>API Layer</strong>: Endpoints for accessing the knowledge base programmatically</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">API Key Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>This project uses the Stack Exchange API to collect data. The current API key in use is:</p>
+                        <div class="alert alert-info">
+                            <code>rl_QSELmsmpZPK2JvKfEHYZ8Pa9e</code>
+                        </div>
+                        <p class="small text-muted">Note: API keys have usage limitations. If you experience issues with data collection, you may need to register for your own API key at <a href="https://stackapps.com/apps/oauth/register" target="_blank">Stack Apps</a>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-home me-1"></i> Return to Home
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %} 

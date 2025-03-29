@@ -1,0 +1,9 @@
+title,description,tags,accepted_answer
+How to tokenize text in NLTK?,I'm trying to tokenize text using NLTK but I'm not sure how to do it correctly.,"['nltk', 'python', 'tokenization', 'nlp']","You can tokenize text in NLTK using the word_tokenize function: ```python
+import nltk
+from nltk.tokenize import word_tokenize
+
+text = 'Hello, how are you doing today?'
+tokens = word_tokenize(text)
+print(tokens)
+```"

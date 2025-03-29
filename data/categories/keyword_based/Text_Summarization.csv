@@ -1,0 +1,2 @@
+title,description,tags,accepted_answer
+Why does BERT perform better than Word2Vec?,I'm comparing BERT and Word2Vec for a text classification task. Why does BERT give better results?,"['bert', 'word2vec', 'deep-learning', 'nlp']","BERT outperforms Word2Vec because: 1) It's context-aware, generating different embeddings for the same word in different contexts, 2) It's based on transformers architecture with attention mechanisms, 3) It uses subword tokenization, and 4) It's pre-trained on massive corpora with bidirectional context."

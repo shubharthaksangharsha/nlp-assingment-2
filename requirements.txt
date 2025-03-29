@@ -1,0 +1,26 @@
+# Core dependencies
+setuptools
+pandas
+scikit-learn
+flask
+numpy
+requests
+beautifulsoup4
+nltk
+matplotlib
+seaborn
+wordcloud
+
+# Additional utilities
+tqdm
+python-dateutil
+Jinja2
+Werkzeug
+MarkupSafe
+
+# Optional: Production servers
+# gunicorn==20.1.0  # For Linux/Mac
+# waitress==2.1.2   # For Windows
+
+# Add scikit-learn to requirements
+

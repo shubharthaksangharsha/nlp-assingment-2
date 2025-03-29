@@ -1,0 +1,9 @@
+title,description,tags,accepted_answer
+What is the best NLP library for sentiment analysis?,I need to perform sentiment analysis on customer reviews. Which NLP library is best for this task?,"['sentiment-analysis', 'nlp', 'machine-learning', 'python']","VADER from NLTK is great for sentiment analysis on social media and review texts: ```python
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+sid = SentimentIntensityAnalyzer()
+text = 'This product is amazing!'
+scores = sid.polarity_scores(text)
+print(scores)
+```"

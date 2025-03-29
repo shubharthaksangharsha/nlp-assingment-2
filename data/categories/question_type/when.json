@@ -1,0 +1,18 @@
+{
+  "category": "when",
+  "post_count": 1,
+  "posts": [
+    {
+      "title": "CUDA error: CUBLAS_STATUS_ALLOC_FAILED when calling cublasCreate(handle)",
+      "description": "<p>I got the following error when I ran my PyTorch deep learning model in Google Colab</p>\n<pre><code>/usr/local/lib/python3.6/dist-packages/torch/nn/functional.py in linear(input, weight, bias)\n   1370         ret = torch.addmm(bias, input, weight.t())\n   1371     else:\n-&gt; 1372         output = input.matmul(weight.t())\n   1373         if bias is not None:\n   1374             output += bias\n\nRuntimeError: CUDA error: CUBLAS_STATUS_ALLOC_FAILED when calling `cublasCreate(handle)`\n</code></pre>\n<p>I even reduced batch size from 128 to 64 i.e., reduced to half,  but still, I got this error. Earlier, I ran the same code with a batch size of 128 but didn't get any error like this.</p>\n",
+      "tags": "['python', 'pytorch', 'nlp', 'cuda', 'bert-language-model']",
+      "accepted_answer": null,
+      "other_answers": "['<p>No, batch size does not matter in this case.</p>\\n<p>The most likely reason is that there is an inconsistency between number of labels and number of output units.</p>\\n<ul>\\n<li>Try printing the size of the final output in the forward pass and check the size of the output</li>\\n</ul>\\n<blockquote>\\n<p><code>print(model.fc1(x).size())</code><br />\\nHere <code>fc1</code> would be replaced by the name of your model\\'s last linear layer before returning</p>\\n</blockquote>\\n<ul>\\n<li>Make sure that <code>label.size()</code>  is equal to <code>prediction.size()</code> before calculating the loss</li>\\n</ul>\\n<p>And even after fixing that problem, you\\'ll have to <strong>restart the GPU runtime</strong> (I needed to do this in my case when using a Colab GPU)</p>\\n<p><a href=\"https://github.com/pytorchbearer/torchbearer/issues/658#issuecomment-581407150\" rel=\"noreferrer\">This GitHub issue comment</a> might also be helpful.</p>\\n', '<p>This error can actually be due to different reasons. It is recommended to debug CUDA errors by running the code on the CPU, if possible. If that\u2019s not possible, try to execute the script via:</p>\\n<pre><code>CUDA_LAUNCH_BLOCKING=1 python [YOUR_PROGRAM]\\n</code></pre>\\n<p>This will help you get the right line of code which raised the error in the stack trace so that you can resolve it.</p>\\n', '<p>Reducing batch size works for me and the training proceeds as planned.</p>\\n', \"<p>This error means &quot;Resource allocation failed inside the cuBLAS library&quot;.</p>\\n<p>Decreasing the batch size solved the issue for me. You said you increased to 64 and it didn't help. Try 32, 8, 1, etc. as well.</p>\\n<p>Also, try running the same on your CPU to check if everything is fine with your tensors' shapes.</p>\\n\", '<p>One cause of this problem may be when the number of label is not equal to the number of network output channels, i.e the number of output classes predicted. Adjust the output to match and it should fix the issue.</p>\\n']",
+      "processed_title": "cuda error cublasstatusallocfailed when calling cublascreatehandle",
+      "processed_description": "got following error ran pytorch deep learning model google colab usrlocallibpython36distpackagestorchnnfunctionalpy linearinput weight bias 1370 ret torchaddmmbias input weightt 1371 else 1372 output inputmatmulweightt 1373 bias none 1374 output bias runtimeerror cuda error cublasstatusallocfailed calling cublascreatehandle even reduced batch size 128 64 ie reduced half still got error earlier ran code batch size 128 didnt get error like",
+      "processed_accepted_answer": null,
+      "processed_other_answers": "[]",
+      "processed_tags": "[]"
+    }
+  ]
+}

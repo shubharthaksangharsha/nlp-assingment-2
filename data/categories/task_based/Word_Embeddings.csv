@@ -1,0 +1,10 @@
+title,description,tags,accepted_answer
+Word embeddings in spaCy - how to use them?,I want to use word embeddings in spaCy but I don't know how to access them.,"['spacy', 'word-embeddings', 'python', 'nlp']","In spaCy, you can access word vectors using the `.vector` attribute of tokens: ```python
+import spacy
+
+nlp = spacy.load('en_core_web_md')  # Load model with vectors
+doc = nlp('Word embeddings are great')
+
+for token in doc:
+    print(token.text, token.vector[:5])  # Print first 5 dimensions
+```"

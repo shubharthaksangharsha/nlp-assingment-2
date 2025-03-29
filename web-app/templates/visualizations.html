@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Visualizations - NLP Knowledge Base{% endblock %}
+
+{% block content %}
+<!-- Visualizations Banner -->
+<section class="bg-primary-light py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Data Visualizations</h1>
+                <p class="lead mb-0">Explore visual insights from our NLP dataset, including tag distributions, word clouds, and more.</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-home me-1"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Visualizations Gallery -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            {% if visualizations %}
+                {% for viz in visualizations %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="visualization-card">
+                            <img src="{{ url_for('static', filename='img/' + viz.file) }}" alt="{{ viz.name }}" class="img-fluid">
+                            <div class="card-body">
+                                <h4>{{ viz.name }}</h4>
+                                {% if 'tag' in viz.name.lower() %}
+                                    <p>Distribution of the most common tags in the NLP dataset, showing which topics are most frequently discussed in the community.</p>
+                                {% elif 'word cloud' in viz.name.lower() and 'title' in viz.name.lower() %}
+                                    <p>Word cloud visualization of the most frequent terms in question titles, highlighting key topics and concerns.</p>
+                                {% elif 'word cloud' in viz.name.lower() and 'description' in viz.name.lower() %}
+                                    <p>Word cloud visualization of the most frequent terms in question descriptions, revealing deeper context of community questions.</p>
+                                {% elif 'frequency' in viz.name.lower() %}
+                                    <p>Time-based visualization showing how NLP questions have evolved over time, reflecting trends in the field.</p>
+                                {% elif 'views' in viz.name.lower() or 'answers' in viz.name.lower() %}
+                                    <p>Relationship between post views and answer counts, providing insights into question engagement patterns.</p>
+                                {% else %}
+                                    <p>Data visualization providing insights into the NLP knowledge base dataset.</p>
+                                {% endif %}
+                                
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#vizModal{{ loop.index }}">
+                                    <i class="fas fa-search-plus me-1"></i> View Full Size
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal for full-size visualization -->
+                    <div class="modal fade" id="vizModal{{ loop.index }}" tabindex="-1" aria-labelledby="vizModalLabel{{ loop.index }}" aria-hidden="true">
+                        <div class="modal-dialog modal-xl">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="vizModalLabel{{ loop.index }}">{{ viz.name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <img src="{{ url_for('static', filename='img/' + viz.file) }}" alt="{{ viz.name }}" class="img-fluid">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> No visualizations found.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Insights Section -->
+<section class="py-5 bg-light-gradient">
+    <div class="container">
+        <h2 class="section-title">Key Insights</h2>
+        
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-tag me-2"></i>Popular Tags</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>The most common tags in the dataset reflect the key technologies and topics in the NLP community:</p>
+                        <ul>
+                            <li><strong>Python</strong>: The dominant programming language for NLP</li>
+                            <li><strong>NLTK</strong>: Most widely referenced NLP library</li>
+                            <li><strong>Machine Learning</strong>: Core foundation of modern NLP</li>
+                            <li><strong>Word Embeddings</strong>: Critical for semantic understanding</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Question Types</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Analysis of question types reveals several patterns:</p>
+                        <ul>
+                            <li><strong>How-to Questions</strong>: Implementation guidance dominates</li>
+                            <li><strong>Conceptual Questions</strong>: Understanding fundamentals</li>
+                            <li><strong>Troubleshooting</strong>: Resolving errors in code</li>
+                            <li><strong>Comparison Questions</strong>: Evaluating different approaches</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Emerging Trends</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Word frequency analysis reveals emerging interests:</p>
+                        <ul>
+                            <li><strong>Transformers</strong>: Growing adoption of transformer models</li>
+                            <li><strong>Fine-tuning</strong>: Customizing pre-trained models</li>
+                            <li><strong>Multilingual</strong>: Increased interest in multilingual NLP</li>
+                            <li><strong>Sentiment Analysis</strong>: Popular practical application</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %} 

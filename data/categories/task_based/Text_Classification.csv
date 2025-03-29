@@ -1,0 +1,9 @@
+title,description,tags,accepted_answer
+Text summarization using transformers,I want to implement text summarization using transformers. Any guidance?,"['text-summarization', 'transformers', 'huggingface', 'nlp']","Here's how to use the transformers library for text summarization: ```python
+from transformers import pipeline
+
+summarizer = pipeline('summarization')
+article = 'Your long text here...'
+summary = summarizer(article, max_length=130, min_length=30, do_sample=False)
+print(summary[0]['summary_text'])
+```"
