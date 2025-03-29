@@ -7,15 +7,24 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Configuration
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
 CATEGORIES_DIR = os.path.join(DATA_DIR, 'categories')
 VISUALIZATIONS_DIR = os.path.join(DATA_DIR, 'visualizations')
-API_KEY = "rl_QSELmsmpZPK2JvKfEHYZ8Pa9e"  # Store your API key
+API_KEY = os.environ.get('STACK_API_KEY', "rl_QSELmsmpZPK2JvKfEHYZ8Pa9e")  # Use environment variable or default
 
 # Ensure the static directories exist
 os.makedirs(os.path.join(app.static_folder, 'img'), exist_ok=True)
 os.makedirs(os.path.join(app.static_folder, 'css'), exist_ok=True)
 os.makedirs(os.path.join(app.static_folder, 'js'), exist_ok=True)
+
+# Run setup script in deployment environments
+if os.environ.get('VERCEL', False):
+    try:
+        import vercel_setup
+        vercel_setup.setup_for_vercel()
+    except Exception as e:
+        print(f"Warning: Vercel setup error: {e}")
 
 # Helper functions
 def load_category_types():
@@ -294,5 +303,6 @@ def reprocess_categories():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+if __name__ == "__main__":
+    # This is used when running locally
+    app.run(host='0.0.0.0', debug=True) 
