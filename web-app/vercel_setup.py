@@ -24,11 +24,12 @@ def copy_data_files(src_dir, dest_dir):
     
     for item in os.listdir(src_dir):
         src_path = os.path.join(src_dir, item)
-        dest_path = os.path.join(dest_dir, item)
+        # For Vercel, use /var/task path
+        dest_path = os.path.join('/var/task', dest_dir, item)
         
         if os.path.isfile(src_path):
             shutil.copy2(src_path, dest_path)
-            print(f"Copied file: {item}")
+            print(f"Copied file: {item} to {dest_path}")
         elif os.path.isdir(src_path):
             if not os.path.exists(dest_path):
                 os.makedirs(dest_path)

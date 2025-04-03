@@ -4,6 +4,7 @@ import json
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from datetime import datetime
 import logging
+import urllib.parse
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -95,30 +96,30 @@ def load_categories(category_type):
 
 def load_posts(category_type, category_name):
     logger.debug(f"Loading posts for {category_type}/{category_name}")
-    logger.debug(f"Categories directory: {CATEGORIES_DIR}")
-    logger.debug(f"Available category types: {os.listdir(CATEGORIES_DIR)}")
     
     try:
-        # Normalize category_type and category_name to match potential filesystem names
+        # URL decode the category name first
+        category_name = urllib.parse.unquote(category_name)
+        
+        # Normalize category_type and category_name
         normalized_type = category_type.lower().replace(' ', '_')
         normalized_name = category_name.lower().replace(' ', '_')
+        normalized_name = normalized_name.replace('%20', '_')  # Handle URL encoding
         
-        # Remove .csv or .json extension if included
+        # Remove extensions and suffixes
         normalized_name = normalized_name.replace('.csv', '').replace('.json', '')
-        
-        # Remove "questions" suffix if present (handle both singular and plural)
         normalized_name = normalized_name.replace('_questions', '').replace('_question', '')
         
         logger.debug(f"Normalized type: {normalized_type}")
         logger.debug(f"Normalized name: {normalized_name}")
         
-        # Construct potential file paths
-        base_path = os.path.join(CATEGORIES_DIR, normalized_type)
-        logger.debug(f"Looking in base path: {base_path}")
-        logger.debug(f"Base path exists: {os.path.exists(base_path)}")
-        
-        if not os.path.exists(base_path):
-            return [], f"Category type directory not found: {category_type}"
+        # Get the correct base path for Vercel
+        if os.environ.get('VERCEL', False):
+            base_path = os.path.join('/var/task/data/categories', normalized_type)
+            logger.debug(f"Using Vercel path: {base_path}")
+        else:
+            base_path = os.path.join(CATEGORIES_DIR, normalized_type)
+            logger.debug(f"Using local path: {base_path}")
             
         # List all files in the directory
         files = os.listdir(base_path)
@@ -340,39 +341,25 @@ def categories():
 
 @app.route('/categories/<category_type>/<category_name>')
 def category_posts(category_type, category_name):
-    print(f"\nAccessing category: {category_type}/{category_name}")
-    print(f"CATEGORIES_DIR: {CATEGORIES_DIR}")
+    # URL decode the parameters
+    category_type = urllib.parse.unquote(category_type)
+    category_name = urllib.parse.unquote(category_name)
     
     posts, error = load_posts(category_type, category_name)
     
-    print(f"Loaded posts: {len(posts)}")
     if error:
-        print(f"Error: {error}")
+        logger.error(f"Error loading posts: {error}")
+        return render_template('category.html',
+                             category_type=category_type,
+                             category_name=category_name,
+                             posts=[],
+                             error_message=error)
     
-    # Prepare breadcrumbs using the *original* names from the URL for display
-    breadcrumbs = [
-        {'name': 'Home', 'url': url_for('index')},
-        {'name': 'Categories', 'url': url_for('categories')},
-        {'name': category_type.replace('_', ' ').title(), 'url': url_for('categories') + '#' + category_type},
-        {'name': category_name.replace('_', ' ').title()} # Current page, no URL
-    ]
-
-    if error:
-        # Handle the error, maybe show a specific error page or message
-        # For now, just pass the error message to the template
-        return render_template('category.html',  # Assuming template name is category.html
-                               category_type=category_type, 
-                               category_name=category_name, 
-                               posts=[], 
-                               error_message=error,
-                               breadcrumbs=breadcrumbs)
-
-    return render_template('category.html', # Assuming template name is category.html
-                           category_type=category_type, 
-                           category_name=category_name, 
-                           posts=posts,
-                           error_message=None, # No error
-                           breadcrumbs=breadcrumbs)
+    logger.debug(f"Loaded {len(posts)} posts")
+    return render_template('category.html',
+                         category_type=category_type,
+                         category_name=category_name,
+                         posts=posts)
 
 @app.route('/visualizations')
 def visualizations():
