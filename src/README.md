@@ -1,4 +1,4 @@
-# �� NLP Knowledge Base - Source Code
+### NLP Knowledge Base - Source Code
 
 > 🚀 The data pipeline that powers the NLP Knowledge Base project, transforming raw Stack Exchange data into organized, categorized knowledge.
 
