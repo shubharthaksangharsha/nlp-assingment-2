@@ -2,6 +2,8 @@
 
 A comprehensive collection of NLP questions, answers, and insights organized by different categorization schemes. This project provides a web interface to explore and search through curated NLP-related content from Stack Exchange.
 
+▲ Web Demo: [https://nlp-knowledge-base-2ay6q43v3-shubharthaks-projects.vercel.app/](https://nlp-knowledge-base-2ay6q43v3-shubharthaks-projects.vercel.app/)
+
 ## Features
 
 - **Multiple Categorization Schemes**:
@@ -28,19 +30,44 @@ A comprehensive collection of NLP questions, answers, and insights organized by 
 
 ```
 nlp_knowledge_base/
+├── src/                
+│   ├── data_collector.py   
+│   ├── preprocessor.py     
+│   ├── data_visualizer.py  
+│   ├── categorizer.py      
+│   └── main.py             
 ├── data/
-│   └── categories/
+│   └── categories/     # Processed data files
 │       ├── keyword_based/
 │       ├── task_based/
 │       ├── library_based/
 │       └── question_type/
-├── web-app/
-│   ├── app.py
-│   ├── static/
-│   └── templates/
-├── vercel.json
-└── requirements.txt
+├── web-app/           # Web application
+│   ├── app.py         # Flask application
+│   ├── static/        # Static assets
+│   └── templates/     # HTML templates
+├── vercel.json       # Vercel deployment config
+└── requirements.txt  # Python dependencies
 ```
+
+## Components
+
+### 1. Data Pipeline (`src/`)
+- Collects data from Stack Exchange API
+- Processes and categorizes posts
+- Generates visualizations
+- See `src/README.md` for detailed documentation
+
+### 2. Web Application (`web-app/`)
+- Flask-based web interface
+- Category browsing and search
+- Responsive design
+- See `web-app/README.md` for details
+
+### 3. Data Storage (`data/`)
+- Organized by category types
+- JSON and CSV formats
+- Processed and ready for web display
 
 ## Getting Started
 

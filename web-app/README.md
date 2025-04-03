@@ -2,6 +2,8 @@
 
 The web interface for the NLP Knowledge Base project. This Flask application provides a modern, responsive interface for exploring NLP-related content organized by various categorization schemes.
 
+▲ Web Demo: [https://nlp-knowledge-base-2ay6q43v3-shubharthaks-projects.vercel.app/](https://nlp-knowledge-base-2ay6q43v3-shubharthaks-projects.vercel.app/)
+
 ## Features
 
 - **Clean, Modern UI**:
