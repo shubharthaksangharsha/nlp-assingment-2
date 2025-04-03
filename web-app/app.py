@@ -11,27 +11,38 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configuration
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Old path assuming parent dir
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))  # web-app directory
-PARENT_DIR = os.path.dirname(APP_ROOT)  # parent directory
-DATA_DIR = os.path.join(PARENT_DIR, 'data')  # data directory in parent
+
+# In Vercel, we need to use the current working directory
+if os.environ.get('VERCEL', False):
+    DATA_DIR = os.path.join(os.getcwd(), 'data')
+else:
+    PARENT_DIR = os.path.dirname(APP_ROOT)  # parent directory
+    DATA_DIR = os.path.join(PARENT_DIR, 'data')  # data directory in parent
+
 CATEGORIES_DIR = os.path.join(DATA_DIR, 'categories')
 VISUALIZATIONS_DIR = os.path.join(DATA_DIR, 'visualizations')
-API_KEY = os.environ.get('STACK_API_KEY', "rl_QSELmsmpZPK2JvKfEHYZ8Pa9e")  # Use environment variable or default
-
-# Ensure the static directories exist
-# Use Flask's app.static_folder which defaults correctly if 'static' is alongside app.py
-os.makedirs(os.path.join(app.static_folder, 'img'), exist_ok=True)
-os.makedirs(os.path.join(app.static_folder, 'css'), exist_ok=True)
-os.makedirs(os.path.join(app.static_folder, 'js'), exist_ok=True)
+API_KEY = os.environ.get('STACK_API_KEY', "rl_QSELmsmpZPK2JvKfEHYZ8Pa9e")
 
 # Run setup script in deployment environments
 if os.environ.get('VERCEL', False):
     try:
         import vercel_setup
         vercel_setup.setup_for_vercel()
+        print(f"Vercel setup complete. Data directory: {DATA_DIR}")
+        print(f"Categories directory exists: {os.path.exists(CATEGORIES_DIR)}")
+        if os.path.exists(CATEGORIES_DIR):
+            print("Categories directory contents:", os.listdir(CATEGORIES_DIR))
     except Exception as e:
         print(f"Warning: Vercel setup error: {e}")
+        import traceback
+        print(traceback.format_exc())
+
+# Ensure the static directories exist
+# Use Flask's app.static_folder which defaults correctly if 'static' is alongside app.py
+os.makedirs(os.path.join(app.static_folder, 'img'), exist_ok=True)
+os.makedirs(os.path.join(app.static_folder, 'css'), exist_ok=True)
+os.makedirs(os.path.join(app.static_folder, 'js'), exist_ok=True)
 
 # Helper functions
 def load_category_types():

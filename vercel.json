@@ -4,7 +4,13 @@
     {
       "src": "web-app/app.py",
       "use": "@vercel/python",
-      "config": { "maxLambdaSize": "15mb" }
+      "config": { 
+        "maxLambdaSize": "50mb",
+        "includeFiles": [
+          "data/**",
+          "web-app/**"
+        ]
+      }
     },
     {
       "src": "web-app/static/**",
