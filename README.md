@@ -2,6 +2,8 @@
 
 A comprehensive collection of NLP questions, answers, and insights organized by different categorization schemes. This project provides a web interface to explore and search through curated NLP-related content from Stack Exchange.
 
+by [**Shubharthak**](https://shubharthaksangharsha.github.io/)
+
 [![Web Demo](web-app/static/img/top_tags.png)](https://nlp-knowledge-base-2ay6q43v3-shubharthaks-projects.vercel.app/)
 
 > 🔗 [**Live Demo**](https://nlp-knowledge-base-2ay6q43v3-shubharthaks-projects.vercel.app/) | [**Documentation**](src/README.md) | [**Web App**](web-app/README.md)
