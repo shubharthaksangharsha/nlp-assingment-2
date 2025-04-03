@@ -9,7 +9,11 @@ cd "$(dirname "$0")"
 
 # Copy visualization images to static directory
 echo "Copying visualization images to static directory..."
-python3 copy_visualizations.py
+if [ -f "copy_visualizations.py" ]; then
+    python3 copy_visualizations.py
+else
+    echo "Warning: copy_visualizations.py not found, skipping visualization copy"
+fi
 
 # Run the Flask application
 echo "Starting the web application..."

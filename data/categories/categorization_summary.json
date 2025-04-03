@@ -2,10 +2,10 @@
   "categorization_methods": {
     "keyword_based": {
       "categories": {
-        "Implementation Issues": 21,
+        "Implementation Issues": 22,
         "Library Usage": 24
       },
-      "total_posts": 45
+      "total_posts": 46
     },
     "task_based": {
       "categories": {},
@@ -18,6 +18,6 @@
       "total_posts": 20
     }
   },
-  "total_categorized_posts": 40,
-  "total_unique_posts": 40
+  "total_categorized_posts": 41,
+  "total_unique_posts": 41
 }

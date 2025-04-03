@@ -1,6 +1,5 @@
 category,count,file_path
 what,12,question_type/what.json
 why,1,question_type/why.json
-how,29,question_type/how.json
+how,30,question_type/how.json
 when,1,question_type/when.json
-where,1,question_type/where.json

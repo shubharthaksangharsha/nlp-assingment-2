@@ -762,3 +762,88 @@ print(bigram[sent])
 defaultdict(&lt;type 'int'&gt;, {'useful': 1, 'was_there': 1, 'learning_can': 1, 'learning': 1, 'of_new': 1, 'can_be': 1, 'mayor': 1, 'there': 1, 'machine': 1, 'new': 1, 'was': 1, 'useful_sometimes': 1, 'be': 1, 'mayor_of': 1, 'york_was': 1, 'york': 1, 'machine_learning': 1, 'the_mayor': 1, 'new_york': 1, 'of': 1, 'sometimes': 1, 'can': 1, 'be_useful': 1, 'the': 1}) 
 </code></pre>
 ","['python', 'nlp', 'gensim']",,"['<p>I got the solution for the problem , There was two parameters I didn\'t take care of it which should be passed to <strong>Phrases() model</strong>, those are</p>\n\n<ol>\n<li><p><strong>min_count</strong> ignore all words and bigrams with total collected count lower than this. <strong>Bydefault it value is 5</strong></p></li>\n<li><p><strong>threshold</strong> represents a threshold for forming the phrases (higher means fewer phrases). A phrase of words a and b is accepted if (cnt(a, b) - min_count) * N / (cnt(a) * cnt(b)) > threshold, where N is the total vocabulary size. <strong>Bydefault it value is 10.0</strong></p></li>\n</ol>\n\n<p>With my above train data with two statements, threshold value was <strong>0</strong>, so I change train datasets and add those two parameters.</p>\n\n<p><strong>My New code</strong></p>\n\n<pre><code>from gensim.models import Phrases\ndocuments = [""the mayor of new york was there"", ""machine learning can be useful sometimes"",""new york mayor was present""]\n\nsentence_stream = [doc.split("" "") for doc in documents]\nbigram = Phrases(sentence_stream, min_count=1, threshold=2)\nsent = [u\'the\', u\'mayor\', u\'of\', u\'new\', u\'york\', u\'was\', u\'there\']\nprint(bigram[sent])\n</code></pre>\n\n<p><strong>Output</strong></p>\n\n<pre><code>[u\'the\', u\'mayor\', u\'of\', u\'new_york\', u\'was\', u\'there\']\n</code></pre>\n\n<p>Gensim is really awesome :)</p>\n']",how to extract phrases from corpus using gensim,preprocessing corpus planing extarct common phrases corpus tried using phrases model gensim tried code giving desired output code gensimmodels import phrases documents mayor new york machine learning useful sometimes sentencestream docsplit doc documents bigram phrasessentencestream sent uthe umayor uof unew uyork uwas uthere printbigramsent output uthe umayor uof unew uyork uwas uthere come uthe umayor uof unewyork uwas uthere tried print vocab train data see bigram working test data going wrong print bigramvocab defaultdict useful 1 wasthere 1 learningcan 1 learning 1 ofnew 1 canbe 1 mayor 1 1 machine 1 new 1 1 usefulsometimes 1 1 mayorof 1 yorkwas 1 york 1 machinelearning 1 themayor 1 newyork 1 1 sometimes 1 1 beuseful 1 1,,[],[]
+How to connect Cortana commands to custom scripts?,"<p>This may be a little early to ask this, but I'm running Windows 10 Technical Preview Build 10122. I'd like to set up Cortana to have custom commands. Here's how she works:</p>
+
+<pre><code>Hey Cortana, &lt;she'll listen and process this command&gt;
+</code></pre>
+
+<p>Microsoft will process the command and if there isn't anything for it, she'll just search the input on bing. However, I'd like to be able to say something like, just for example </p>
+
+<pre><code>Hey Cortana, I'm going to bed now
+</code></pre>
+
+<p>And have the input <code>I'm going to bed now</code> trigger run a batch script, a VBScript, a command, or any some sort some of custom response that basically does the following.</p>
+
+<pre><code>C:\&gt; shutdown -s
+</code></pre>
+
+<p>Is there a way to set up a predefined custom commands for Cortana?</p>
+
+<p><strong>Update:</strong></p>
+
+<p>I created this <a href=""https://youtu.be/GICF03UAOcQ"" rel=""noreferrer""><strong>basic YouTube tutorial</strong></a> and <a href=""https://youtu.be/GICF03UAOcQ"" rel=""noreferrer""><strong>this more advanced one</strong></a> with a corresponding <a href=""https://github.com/crclayton/custom-cortana-commands-template"" rel=""noreferrer""><strong>GitHub repo</strong></a> based on talkitbr's excellent and very helpful answer <a href=""https://stackoverflow.com/a/31387719/2374028"">below</a>. </p>
+
+<p>At first his answer was beyond my understanding so I decided to break it down in a bit more detail for future users like myself.</p>
+","['scripting', 'nlp', 'windows-10', 'cortana']","<p>You can create commands for Cortana to listen for.
+These commands need to be described in a XML file called <a href=""https://msdn.microsoft.com/en-us/library/windows/apps/dn706593.aspx"" rel=""nofollow noreferrer"">Voice Command Definitions</a> or VCD.</p>
+<p>Here's an example:</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+&lt;VoiceCommands xmlns=&quot;http://schemas.microsoft.com/voicecommands/1.2&quot;&gt;
+    &lt;CommandSet xml:lang=&quot;en-us&quot; Name=&quot;HomeControlCommandSet_en-us&quot;&gt;
+        &lt;CommandPrefix&gt;HomeControl&lt;/CommandPrefix&gt;
+        &lt;Example&gt;Control alarm, temperature, light and others&lt;/Example&gt;
+
+        &lt;Command Name=&quot;Activate_Alarm&quot;&gt;
+            &lt;Example&gt;Activate alarm&lt;/Example&gt;
+            &lt;ListenFor&gt;[Would] [you] [please] activate [the] alarm [please]&lt;/ListenFor&gt;
+            &lt;ListenFor RequireAppName=&quot;BeforeOrAfterPhrase&quot;&gt;Activate alarm&lt;/ListenFor&gt;
+            &lt;ListenFor RequireAppName=&quot;ExplicitlySpecified&quot;&gt;Activate {builtin:AppName} alarm&lt;/ListenFor&gt;
+            &lt;Feedback&gt;Activating alarm&lt;/Feedback&gt;
+            &lt;Navigate /&gt;
+        &lt;/Command&gt;
+        ...
+    &lt;/CommandSet&gt;
+&lt;/VoiceCommands&gt;
+</code></pre>
+<p>After create this definition, you need to register it at App Startup:</p>
+<pre><code>protected async override void OnLaunched(LaunchActivatedEventArgs e)
+{
+    ...
+    // Install the VCD
+    try
+    {
+        StorageFile vcdStorageFile = await Package.Current.InstalledLocation.GetFileAsync(@&quot;HomeControlCommands.xml&quot;);
+        await VoiceCommandDefinitionManager.InstallCommandDefinitionsFromStorageFileAsync(vcdStorageFile);
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine(&quot;There was an error registering the Voice Command Definitions&quot;, ex);
+    }
+}
+</code></pre>
+<p>An then override the <code>App.OnActivated</code> method to handle when the events are triggered:</p>
+<pre><code>protected override void OnActivated(IActivatedEventArgs e)
+{
+    // Handle when app is launched by Cortana
+    if (e.Kind == ActivationKind.VoiceCommand)
+    {
+        VoiceCommandActivatedEventArgs commandArgs = e as VoiceCommandActivatedEventArgs;
+        SpeechRecognitionResult speechRecognitionResult = commandArgs.Result;
+ 
+        string voiceCommandName = speechRecognitionResult.RulePath[0];
+        string textSpoken = speechRecognitionResult.Text;
+        IReadOnlyList&lt;string&gt; recognizedVoiceCommandPhrases;
+ 
+        System.Diagnostics.Debug.WriteLine(&quot;voiceCommandName: &quot; + voiceCommandName);
+        System.Diagnostics.Debug.WriteLine(&quot;textSpoken: &quot; + textSpoken);
+ 
+        switch (voiceCommandName)
+        {
+            case &quot;Activate_Alarm&quot;:
+                System.Diagnostics.Debug.WriteLine(&quot;Activate_Alarm command&quot;);
+                break;
+</code></pre>
+<p><a href=""https://web.archive.org/web/20160528212021/https://talkitbr.com/2015/07/13/integrando-a-cortana-em-seu-aplicativo-windows-10/"" rel=""nofollow noreferrer"">The tutorial shows the complete code [web archive]</a>.</p>
+<p>After you do all of this, you can call your batch scripts using <code>ProcessStartInfo</code> or <code>System.Diagnostics.Process.Start</code>.</p>
+<p>Also, if you are interested in responding to the user through Cortana window, check this <a href=""https://web.archive.org/web/20160405011423/http://talkitbr.com/2015/08/24/usando-cortana-em-background/"" rel=""nofollow noreferrer"">post regarding Cortana in background [web archive]</a>.</p>
+","['<p>What you can do is write a .bat file and add a shortcut to the file to the Folder: C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\nyou can name the shortcut whatever you want and trigger the shutdown by saying: ""Hey Cortana open/start [shortcut name]"".\nMake sure that Cortana only listens to you to not get ""pranked"".</p>\n']",how to connect cortana commands to custom scripts,may little early ask im running windows 10 technical preview build 10122 id like set cortana custom commands heres works hey cortana microsoft process command isnt anything shell search input bing however id like able say something like example hey cortana im going bed input im going bed trigger run batch script vbscript command sort custom response basically following c shutdown way set predefined custom commands cortana update created basic youtube tutorial advanced one corresponding github repo based talkitbrs excellent helpful answer first answer beyond understanding decided break bit detail future users like,create commands cortana listen commands need described xml file called voice command definitions vcd heres example homecontrol control alarm temperature light others activate alarm would please activate alarm please activate alarm activate builtinappname alarm activating alarm create definition need register app startup protected async override void onlaunchedlaunchactivatedeventargs e install vcd try storagefile vcdstoragefile await packagecurrentinstalledlocationgetfileasynchomecontrolcommandsxml await voicecommanddefinitionmanagerinstallcommanddefinitionsfromstoragefileasyncvcdstoragefile catch exception ex systemdiagnosticsdebugwritelinethere error registering voice command definitions ex override apponactivated method handle events triggered protected override void onactivatediactivatedeventargs e handle app launched cortana ekind activationkindvoicecommand voicecommandactivatedeventargs commandargs e voicecommandactivatedeventargs speechrecognitionresult speechrecognitionresult commandargsresult string voicecommandname speechrecognitionresultrulepath0 string textspoken speechrecognitionresulttext ireadonlylist recognizedvoicecommandphrases systemdiagnosticsdebugwritelinevoicecommandname voicecommandname systemdiagnosticsdebugwritelinetextspoken textspoken switch voicecommandname case activatealarm systemdiagnosticsdebugwritelineactivatealarm command break tutorial shows complete code web archive call batch scripts using processstartinfo systemdiagnosticsprocessstart also interested responding user cortana window check post regarding cortana background web archive,[],[]
