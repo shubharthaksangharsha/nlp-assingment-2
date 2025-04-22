@@ -105,6 +105,7 @@ To keep the repository lightweight, the data/ folder is compressed.
 After downloading, unzip with:
 ```bash
 unzip data.zip
+```
 
 This will recreate the data/ folder in your project directory.
 
