@@ -11,27 +11,27 @@ if not exist venv (
 )
 
 rem Activate virtual environment
+echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
 rem Install required packages
 echo Installing required packages...
 pip install -r requirements.txt
 
-rem Check if API key is provided
-if "%~1"=="" (
-    echo No API key provided. Running with default settings.
-    echo For better rate limits, register at https://stackapps.com/apps/oauth/register
-    echo and provide your API key as the first argument to this script.
-    cd src
-    python main.py
-) else (
-    set API_KEY=%~1
-    echo Using provided API key: %API_KEY%
-    cd src
-    python main.py --api-key "%API_KEY%"
-)
+rem Step 1: Run the CLI application without data collection
+echo Starting CLI application (skipping data collection)...
+cd src
+python main.py --skip-collection
+cd ..
 
-rem Deactivate virtual environment
+rem Step 2: Start web application
+echo Starting web application...
+cd web-app
+python copy_visualizations.py
+python app.py
+
+rem Deactivate virtual environment when the web app is closed
+echo Deactivating virtual environment...
 call venv\Scripts\deactivate.bat
 
 echo Script completed.

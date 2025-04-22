@@ -69,48 +69,51 @@ nlp_knowledge_base/
 
 ## 🚀 Getting Started
 
-1. **Clone the Repository**
+### ⚠️ IMPORTANT: Dataset Setup
+You **MUST** download and unzip the dataset before running the application:
+
+1. **Download the dataset** from the link below:
+   [🔽 Click here to download the dataset](https://drive.google.com/file/d/1EPZ6mJvLAj0sJqNAWWLo8Bz90K2sSBgy/view?usp=sharing)
+
+2. **Unzip the dataset** in the project root directory:
+   ```bash
+   unzip data.zip
+   ```
+   This will create the required `data/` folder with all necessary files.
+
+### Running the Application
+
+3. **Clone the Repository**
    ```bash
    git clone https://github.com/shubharthaksangharsha/nlp-assingment-2.git
    cd nlp-assingment-2
    ```
 
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+4. **Run the Application**
+   - On Linux/Mac:
+     ```bash
+     ./run.sh
+     ```
+   - On Windows:
+     ```bash
+     run.bat
+     ```
+   
+   The script will:
+   - Create a virtual environment and install dependencies
+   - Run the processing pipeline (skipping data collection)
+   - Start the web application automatically
 
-3. **Install Git LFS (for handling large files)
-   ```bash
-   sudo apt install git-lfs
-   git lfs install
-
-3. **Run Locally**
-   ```bash
-   cd web-app
-   python app.py
-   ```
-
-4. **Access the Application**
+5. **Access the Web Interface**
    - Open your browser and navigate to `http://localhost:5000`
 
 --- 
 
-## 📦 Download the Dataset
+## 📦 Dataset Details
 
-To keep the repository lightweight, the data/ folder is compressed.
+The dataset contains pre-processed NLP questions and answers from Stack Exchange, organized into multiple categorization schemes.
 
-[🔽 Click here to download the dataset](https://drive.google.com/file/d/1EPZ6mJvLAj0sJqNAWWLo8Bz90K2sSBgy/view?usp=sharing)
-
-
-After downloading, unzip with:
-```bash
-unzip data.zip
-```
-
-This will recreate the data/ folder in your project directory.
-
-⚠️ Note: Large raw .csv files are excluded from Git using .gitignore. 
+⚠️ Note: Large raw .csv files are excluded from Git using .gitignore. The application requires the dataset to function properly.
 
 ## 📊 Data Organization
 

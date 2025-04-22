@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Replace with your actual API key
+#API Key
 API_KEY="rl_QSELmsmpZPK2JvKfEHYZ8Pa9e"
 
 # Define the list of tags you want to collect data for
