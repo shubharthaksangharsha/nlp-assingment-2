@@ -1,3 +1,6 @@
 Flask
 pandas
-gunicorn  # WSGI server for production 
+gunicorn
+cachelib
+psutil
+filelock
