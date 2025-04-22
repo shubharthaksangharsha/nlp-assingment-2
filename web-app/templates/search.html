@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block title %}Search - NLP Knowledge Base{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/github.min.css">
+{% endblock %}
+
+{% block content %}
+<!-- Search Banner -->
+<section class="bg-primary-light py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="mb-4"><i class="fas fa-search me-2"></i>Search Knowledge Base</h1>
+                <form action="{{ url_for('search') }}" method="get">
+                    <div class="input-group input-group-lg">
+                        <input type="text" name="query" class="search-input" value="{{ query }}" placeholder="Search for NLP topics, libraries, or questions..." aria-label="Search">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search me-1"></i> Search
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3">
+                    <p class="text-muted mb-2">Popular searches:</p>
+                    <a href="{{ url_for('search') }}?query=nltk" class="btn btn-sm btn-outline-primary me-2 mb-2">NLTK</a>
+                    <a href="{{ url_for('search') }}?query=spacy" class="btn btn-sm btn-outline-primary me-2 mb-2">spaCy</a>
+                    <a href="{{ url_for('search') }}?query=word2vec" class="btn btn-sm btn-outline-primary me-2 mb-2">Word2Vec</a>
+                    <a href="{{ url_for('search') }}?query=sentiment" class="btn btn-sm btn-outline-primary me-2 mb-2">Sentiment Analysis</a>
+                    <a href="{{ url_for('search') }}?query=tokenization" class="btn btn-sm btn-outline-primary me-2 mb-2">Tokenization</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Search Results -->
+<section class="py-5">
+    <div class="container">
+        {% if query %}
+            <div class="mb-4">
+                <h2 class="mb-0">
+                    {% if results %}
+                        {{ results|length }} results for "{{ query }}"
+                    {% else %}
+                        No results found for "{{ query }}"
+                    {% endif %}
+                </h2>
+                <hr>
+            </div>
+            
+            {% if results %}
+                <div class="row">
+                    <div class="col-lg-3 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="mb-0">Filters</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Sort by:</label>
+                                    <select class="form-select" id="sortFilter">
+                                        <option value="relevance">Relevance</option>
+                                        <option value="title-asc">Title (A-Z)</option>
+                                        <option value="title-desc">Title (Z-A)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Tags:</label>
+                                    <div id="tagFilters">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                                
+                                <button id="resetFilters" class="btn btn-outline-secondary btn-sm mt-2">
+                                    <i class="fas fa-undo me-1"></i> Reset Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-9">
+                        <div id="searchResults">
+                            {% for post in results %}
+                                <div class="post search-result" data-title="{{ post.title }}" data-tags="{{ post.tags|join(',') }}">
+                                    <h3 class="post-title">{{ post.title }}</h3>
+                                    
+                                    {% if post.tags %}
+                                        <div class="post-tags mb-3">
+                                            {% for tag in post.tags %}
+                                                <span class="post-tag">{{ tag }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if post.description %}
+                                        <div class="post-description">
+                                            {{ post.description|truncate(300)|safe }}
+                                            <a href="#" class="toggle-description" data-bs-toggle="collapse" data-bs-target="#fullDescription{{ loop.index }}" aria-expanded="false">Read more</a>
+                                            <div class="collapse" id="fullDescription{{ loop.index }}">
+                                                {{ post.description|safe }}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if post.accepted_answer %}
+                                        <div class="mt-3">
+                                            <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#answer{{ loop.index }}" aria-expanded="false">
+                                                <i class="fas fa-check-circle me-1"></i> Show Accepted Answer
+                                            </button>
+                                            
+                                            <div class="collapse mt-3" id="answer{{ loop.index }}">
+                                                <div class="post-answer">
+                                                    <h5><i class="fas fa-check-circle text-success me-2"></i>Accepted Answer</h5>
+                                                    {{ post.accepted_answer|safe }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No results found. Try different search terms or browse our <a href="{{ url_for('categories') }}">categories</a>.
+                </div>
+                
+                <h3 class="mt-5 mb-3">Suggestions:</h3>
+                <ul>
+                    <li>Check your spelling</li>
+                    <li>Try more general keywords</li>
+                    <li>Try different keywords</li>
+                    <li>Browse the <a href="{{ url_for('categories') }}">categories</a> instead</li>
+                </ul>
+            {% endif %}
+        {% else %}
+            <div class="text-center my-5">
+                <i class="fas fa-search fa-4x text-primary mb-3"></i>
+                <h2>Enter a search term to begin</h2>
+                <p class="lead text-muted">Search for NLP topics, libraries, specific questions, or techniques</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize syntax highlighting
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+        
+        // Format code blocks
+        document.querySelectorAll('pre').forEach((block) => {
+            if (!block.classList.contains('code-block') && block.querySelector('code')) {
+                block.classList.add('code-block');
+            }
+        });
+        
+        // Toggle description text
+        document.querySelectorAll('.toggle-description').forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                this.textContent = isExpanded ? 'Read more' : 'Read less';
+            });
+        });
+        
+        // Setup Tag Filters
+        function setupTagFilters() {
+            const posts = document.querySelectorAll('.search-result');
+            const tagFiltersContainer = document.getElementById('tagFilters');
+            
+            if (!tagFiltersContainer) return;
+            
+            // Collect all unique tags
+            const allTags = new Set();
+            posts.forEach(post => {
+                const tags = post.getAttribute('data-tags').split(',').filter(tag => tag.trim() !== '');
+                tags.forEach(tag => allTags.add(tag));
+            });
+            
+            // Create tag checkboxes
+            allTags.forEach(tag => {
+                if (!tag) return;
+                
+                const tagDiv = document.createElement('div');
+                tagDiv.className = 'form-check';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `tag-${tag}`;
+                checkbox.className = 'form-check-input tag-filter';
+                checkbox.value = tag;
+                
+                const label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.htmlFor = `tag-${tag}`;
+                label.textContent = tag;
+                
+                tagDiv.appendChild(checkbox);
+                tagDiv.appendChild(label);
+                tagFiltersContainer.appendChild(tagDiv);
+            });
+            
+            // Add event listeners to tag checkboxes
+            document.querySelectorAll('.tag-filter').forEach(checkbox => {
+                checkbox.addEventListener('change', applyFilters);
+            });
+        }
+        
+        // Apply Filters
+        function applyFilters() {
+            const posts = document.querySelectorAll('.search-result');
+            const selectedTags = Array.from(document.querySelectorAll('.tag-filter:checked')).map(cb => cb.value);
+            const sortValue = document.getElementById('sortFilter').value;
+            
+            // Show/hide posts based on tag filters
+            posts.forEach(post => {
+                const postTags = post.getAttribute('data-tags').split(',').filter(tag => tag.trim() !== '');
+                
+                if (selectedTags.length === 0 || selectedTags.some(tag => postTags.includes(tag))) {
+                    post.style.display = '';
+                } else {
+                    post.style.display = 'none';
+                }
+            });
+            
+            // Sort visible posts
+            sortPosts(sortValue);
+        }
+        
+        // Sort Posts
+        function sortPosts(sortType) {
+            const resultsContainer = document.getElementById('searchResults');
+            const posts = Array.from(resultsContainer.querySelectorAll('.search-result')).filter(post => post.style.display !== 'none');
+            
+            posts.sort((a, b) => {
+                const titleA = a.getAttribute('data-title').toLowerCase();
+                const titleB = b.getAttribute('data-title').toLowerCase();
+                
+                if (sortType === 'title-asc') {
+                    return titleA.localeCompare(titleB);
+                } else if (sortType === 'title-desc') {
+                    return titleB.localeCompare(titleA);
+                } else {
+                    // Default relevance sorting - maintain original order
+                    return 0;
+                }
+            });
+            
+            // Reorder posts in the DOM
+            posts.forEach(post => {
+                resultsContainer.appendChild(post);
+            });
+        }
+        
+        // Reset Filters
+        document.getElementById('resetFilters')?.addEventListener('click', function() {
+            document.querySelectorAll('.tag-filter').forEach(cb => {
+                cb.checked = false;
+            });
+            
+            document.getElementById('sortFilter').value = 'relevance';
+            
+            applyFilters();
+        });
+        
+        // Sort Filter Change
+        document.getElementById('sortFilter')?.addEventListener('change', function() {
+            applyFilters();
+        });
+        
+        // Initialize tag filters
+        setupTagFilters();
+    });
+</script>
+{% endblock %} 

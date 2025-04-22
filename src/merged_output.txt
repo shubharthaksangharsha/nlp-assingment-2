@@ -1,0 +1,1699 @@
+# main.py - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/main.py
+#!/usr/bin/env python3
+import os
+import argparse
+import time
+import pandas as pd
+from typing import List, Dict, Any, Union, Tuple
+
+# Import our modules
+from data_collector import StackOverflowDataCollector
+from preprocessor import DataPreprocessor
+from data_visualizer import DataVisualizer
+from categorizer import PostCategorizer
+
+def ensure_directories():
+    """Create necessary directories for the project."""
+    os.makedirs("../data", exist_ok=True)
+    os.makedirs("../data/visualizations", exist_ok=True)
+    os.makedirs("../data/categories", exist_ok=True)
+
+def run_data_collection(api_key: str = None, max_questions: int = 20000, tag: str = "nlp", force_collection: bool = False):
+    """
+    Run the data collection step.
+    Collects questions for a specific tag and appends to a combined dataset file.
+
+    Args:
+        api_key (str, optional): Stack Exchange API key. Defaults to None.
+        max_questions (int, optional): Maximum number of questions to retrieve. Defaults to 20000.
+        tag (str, optional): Tag to filter questions. Defaults to "nlp".
+        force_collection (bool, optional): Whether to force initial data collection for this tag even if intermediate files exist. Defaults to False.
+
+    Returns:
+        str: Path to the *combined* dataset file where data was appended.
+    """
+    print(f"\n=== Step 1: Data Collection for tag [{tag}] ===")
+
+    # Define the path for the intermediate file for this specific tag
+    # This file stores the initial question metadata collected by get_questions
+    tag_specific_intermediate_file = f"../data/{tag}_questions_initial_collection.csv"
+
+    # Define the path for the *combined* dataset file where all tags' data will be appended
+    combined_output_file = "../data/nlp_stackoverflow_dataset.csv"
+
+    questions_list = []
+
+    # Check if the intermediate collection file for this tag already exists
+    # We only skip the initial collection for this tag if the intermediate file exists and force_collection is False
+    if os.path.exists(tag_specific_intermediate_file) and not force_collection:
+        print(f"Intermediate dataset for tag [{tag}] already exists at {tag_specific_intermediate_file}. Skipping initial collection for this tag.")
+        # Load questions from the intermediate file to proceed to create_dataset
+        try:
+            # Ensure correct dtypes if loading from CSV
+            questions_df = pd.read_csv(tag_specific_intermediate_file)
+            questions_list = questions_df.to_dict('records')
+            print(f"Loaded {len(questions_list)} questions from intermediate file.")
+        except Exception as e:
+            print(f"Error loading intermediate file {tag_specific_intermediate_file}: {e}")
+            questions_list = [] # Proceed with empty list if loading fails or file is corrupt
+
+    else:
+        # Create collector for the initial question list collection
+        collector = StackOverflowDataCollector(api_key=api_key)
+
+        # Collect questions for the current tag
+        start_time = time.time()
+        questions_list = collector.get_questions(tag=tag, max_questions=max_questions)
+
+        # Save the intermediate result for this tag if any questions were collected
+        if questions_list:
+             intermediate_df = pd.DataFrame(questions_list)
+             intermediate_df.to_csv(tag_specific_intermediate_file, index=False)
+             print(f"Saved intermediate dataset for tag [{tag}] to {tag_specific_intermediate_file}")
+
+        elapsed_time = time.time() - start_time
+        print(f"Initial data collection for tag [{tag}] completed in {elapsed_time:.2f} seconds.")
+
+    # Now, process the collected questions (fetch answers) and append to the *combined* dataset file
+    # This step uses the create_dataset function which appends to the specified filename
+    if questions_list: # Only run create_dataset if there are questions to process
+        # Create a new collector instance for this phase if needed,
+        # ensuring it has the API key for answer fetching
+        collector = StackOverflowDataCollector(api_key=api_key)
+        # Use the combined_output_file name for the create_dataset function
+        collector.create_dataset(questions_list, filename=os.path.basename(combined_output_file))
+
+    # Return the path to the combined dataset file for subsequent steps
+    return combined_output_file
+
+def run_preprocessing(input_file: str, remove_code: bool = True, force_collection: bool = False):
+    """
+    Run the preprocessing step.
+    Processes the combined dataset file.
+
+    Args:
+        input_file (str): Path to the input dataset (should be the combined file).
+        remove_code (bool, optional): Whether to remove code blocks from text. Defaults to True.
+        force_collection (bool, optional): Whether the previous collection step was forced for *any* tag.
+                                           This is used to decide if reprocessing is needed. Defaults to False.
+
+    Returns:
+        str: Path to the preprocessed dataset file.
+    """
+    print("\n=== Step 2: Data Preprocessing ===")
+
+    # Define the output filename for the preprocessed combined dataset
+    output_file = input_file.replace(".csv", "_preprocessed.csv")
+
+    # Check if preprocessed dataset already exists
+    # Reprocess only if the input file is newer than the output file,
+    # or if force_collection was true (meaning new data was likely added),
+    # or if the output file doesn't exist.
+    reprocess_needed = True
+    if os.path.exists(output_file) and os.path.exists(input_file):
+        if not force_collection and os.path.getmtime(output_file) >= os.path.getmtime(input_file):
+            print(f"Preprocessed dataset already exists and is up-to-date at {output_file}. Skipping preprocessing step.")
+            reprocess_needed = False
+
+
+    if reprocess_needed:
+        # Check if input file exists
+        if not os.path.exists(input_file):
+            # This could happen if collection was skipped and the combined file doesn't exist yet
+            print(f"Input file for preprocessing not found: {input_file}. Skipping preprocessing.")
+            return None # Or raise an error
+
+        print(f"Loading data from {input_file} for preprocessing...")
+        # Load dataset
+        df = pd.read_csv(input_file)
+
+        # Create preprocessor
+        preprocessor = DataPreprocessor(remove_code=remove_code)
+
+        # Preprocess data
+        start_time = time.time()
+        processed_df = preprocessor.preprocess_dataframe(df)
+
+        # Save preprocessed data
+        processed_df.to_csv(output_file, index=False)
+
+        elapsed_time = time.time() - start_time
+        print(f"Preprocessing completed in {elapsed_time:.2f} seconds. Output saved to {output_file}")
+    else:
+        print(f"Preprocessing skipped. Using existing file: {output_file}")
+
+
+    return output_file
+
+
+def run_visualization(input_file: str):
+    """
+    Run the data visualization step.
+    Uses the preprocessed combined dataset file.
+
+    Args:
+        input_file (str): Path to the preprocessed dataset.
+    """
+    print("\n=== Step 3: Data Visualization ===")
+
+    # Check if input file exists
+    if not os.path.exists(input_file) or input_file is None:
+        print(f"Input file for visualization not found or is None: {input_file}. Skipping visualization step.")
+        return
+
+    print(f"Using preprocessed data from {input_file} for visualization...")
+    # Create visualizer
+    visualizer = DataVisualizer(input_file)
+
+    # Generate visualizations
+    start_time = time.time()
+    visualizer.generate_visualizations()
+
+    elapsed_time = time.time() - start_time
+    print(f"Visualization completed in {elapsed_time:.2f} seconds.")
+
+def run_categorization(input_file: str):
+    """
+    Run the post categorization step.
+    Uses the preprocessed combined dataset file.
+
+    Args:
+        input_file (str): Path to the preprocessed dataset.
+    """
+    print("\n=== Step 4: Post Categorization ===")
+
+    # Check if input file exists
+    if not os.path.exists(input_file) or input_file is None:
+        print(f"Input file for categorization not found or is None: {input_file}. Skipping categorization step.")
+        return
+
+    print(f"Using preprocessed data from {input_file} for categorization...")
+    # Create categorizer
+    categorizer = PostCategorizer(input_file)
+
+    # Perform categorization
+    start_time = time.time()
+    categorizer.categorize_all()
+
+    elapsed_time = time.time() - start_time
+    print(f"Categorization completed in {elapsed_time:.2f} seconds.")
+
+def parse_arguments():
+    """
+    Parse command line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="NLP Knowledge Base Generator")
+
+    parser.add_argument("--api-key", type=str, help="Stack Exchange API key")
+    parser.add_argument("--max-questions", type=int, default=20000, help="Maximum number of questions to retrieve per tag collection run") # Clarified help text
+    parser.add_argument("--tag", type=str, default="nlp", help="Tag to filter questions for the current collection run") # Clarified help text
+    parser.add_argument("--skip-collection", action="store_true", help="Skip initial data collection for the specified tag")
+    parser.add_argument("--skip-preprocessing", action="store_true", help="Skip preprocessing step on the combined dataset")
+    parser.add_argument("--skip-visualization", action="store_true", help="Skip visualization step")
+    parser.add_argument("--skip-categorization", action="store_true", help="Skip categorization step")
+    parser.add_argument("--remove-code", action="store_true", help="Remove code blocks from text during preprocessing")
+    parser.add_argument("--force-collection", action="store_true", help="Force initial data collection for the specified tag, overwriting intermediate files")
+
+
+    return parser.parse_args()
+
+def main():
+    """Main function to run the NLP knowledge base pipeline."""
+    # Ensure necessary directories exist
+    ensure_directories()
+
+    # Parse command line arguments
+    args = parse_arguments()
+
+    # Display banner
+    print("=" * 80)
+    print(" NLP Knowledge Base Generator ".center(80, "="))
+    print("=" * 80)
+
+    # Define the fixed path for the combined raw dataset file
+    combined_raw_dataset_file = "../data/nlp_stackoverflow_dataset.csv"
+    # Define the path for the preprocessed combined dataset file
+    preprocessed_combined_dataset_file = combined_raw_dataset_file.replace(".csv", "_preprocessed.csv")
+
+
+    # Step 1: Data Collection
+    # run_data_collection will collect for the specified tag and append to the combined raw dataset file
+    if not args.skip_collection:
+        # run_data_collection now returns the path to the combined file
+        run_data_collection(
+            api_key=args.api_key,
+            max_questions=args.max_questions,
+            tag=args.tag,
+            force_collection=args.force_collection
+        )
+        # After collection, the combined_raw_dataset_file is the one to use for subsequent steps
+        input_file_for_subsequent_steps = combined_raw_dataset_file
+    else:
+        print(f"\n=== Step 1: Data Collection for tag [{args.tag}] [SKIPPED] ===")
+        # If skipping collection, the input file for subsequent steps is the existing combined file
+        input_file_for_subsequent_steps = combined_raw_dataset_file
+
+
+    # Step 2: Data Preprocessing
+    if not args.skip_preprocessing:
+        # Preprocess the combined dataset file
+        # Pass force_collection so preprocessing reruns if new data was collected
+        preprocessed_file_output = run_preprocessing(
+            input_file=input_file_for_subsequent_steps, # Use the combined file as input
+            remove_code=args.remove_code,
+            force_collection=args.force_collection # Rerun preprocessing if collection was forced
+        )
+    else:
+        print("\n=== Step 2: Data Preprocessing [SKIPPED] ===")
+        # If skipping preprocessing, the preprocessed file is the standard output name
+        preprocessed_file_output = preprocessed_combined_dataset_file
+
+
+    # Step 3: Data Visualization
+    if not args.skip_visualization:
+        # Visualize the preprocessed combined dataset
+        run_visualization(input_file=preprocessed_file_output)
+    else:
+        print("\n=== Step 3: Data Visualization [SKIPPED] ===")
+
+    # Step 4: Post Categorization
+    if not args.skip_categorization:
+        # Categorize the preprocessed combined dataset
+        run_categorization(input_file=preprocessed_file_output)
+    else:
+        print("\n=== Step 4: Post Categorization [SKIPPED] ===")
+
+    # Display completion message
+    print("\n" + "=" * 80)
+    print(" NLP Knowledge Base Generation Complete ".center(80, "="))
+    print("=" * 80)
+    print("\nResults:")
+    print(f"- Combined raw dataset: {combined_raw_dataset_file}") # Updated message
+    # Ensure preprocessed_file_output is not None if a step was skipped
+    if preprocessed_file_output and os.path.exists(preprocessed_file_output):
+         print(f"- Preprocessed dataset: {preprocessed_combined_dataset_file}")
+    else:
+         print("- Preprocessed dataset: Not generated in this run or file not found.")
+
+    print(f"- Visualizations: ../data/visualizations/")
+    print(f"- Categorized posts: ../data/categories/")
+    print("\nThank you for using the NLP Knowledge Base Generator!")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
+# categorizer.py - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/categorizer.py
+import pandas as pd
+import re
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import json
+import os
+from typing import List, Dict, Any, Union, Tuple
+
+class PostCategorizer:
+    """
+    Categorize NLP-related Stack Overflow posts based on various criteria.
+    """
+    
+    def __init__(self, data_path: str):
+        """
+        Initialize the categorizer with preprocessed dataset.
+        
+        Args:
+            data_path (str): Path to the preprocessed dataset.
+        """
+        self.data_path = data_path
+        self.df = pd.read_csv(data_path)
+        self.categories = {}
+        
+        # Create categories directory
+        os.makedirs("../data/categories", exist_ok=True)
+    
+    def keyword_based_categorization(self, column: str = 'processed_title', 
+                                    min_posts_per_category: int = 10) -> Dict[str, List[int]]:
+        """
+        Categorize posts based on keywords in the title.
+        
+        Args:
+            column (str, optional): Column to search for keywords. Defaults to 'processed_title'.
+            min_posts_per_category (int, optional): Minimum posts required for a category. Defaults to 10.
+            
+        Returns:
+            Dict[str, List[int]]: Dictionary mapping category names to list of post indices.
+        """
+        print(f"Performing keyword-based categorization on {column}...")
+        
+        # Define categories and their keywords
+        category_keywords = {
+            "Text Classification": ["classification", "classifier", "classify", "categorization", "categorize"],
+            "Named Entity Recognition": ["ner", "named entity", "entity recognition", "entity extraction"],
+            "Sentiment Analysis": ["sentiment", "emotion", "polarity", "opinion"],
+            "Text Summarization": ["summary", "summarization", "summarize", "summarizing"],
+            "Machine Translation": ["translation", "translate", "translator", "machine translation", "mt"],
+            "Question Answering": ["question answering", "qa system", "answer questions"],
+            "Topic Modeling": ["topic", "lda", "topic model", "latent dirichlet"],
+            "Word Embeddings": ["word2vec", "glove", "embedding", "word embedding", "vector"],
+            "Text Preprocessing": ["preprocessing", "preprocess", "tokenization", "tokenize", "lemmatization", "stemming"],
+            "Language Identification": ["language identification", "language detection", "detect language", "identify language"],
+            "Text Similarity": ["similarity", "similar text", "document similarity", "semantic similarity"],
+            "Part-of-Speech Tagging": ["pos", "part of speech", "tagging", "tagger"],
+            "Implementation Issues": ["how to", "how do i", "implementation", "code", "example"],
+            "Understanding Concepts": ["what is", "explain", "understand", "concept", "difference between", "why"],
+            "Performance Issues": ["slow", "performance", "speed", "memory", "efficient", "optimization"],
+            "Error Troubleshooting": ["error", "problem", "issue", "bug", "fix", "solve", "exception", "failed"],
+            "Library Usage": ["spacy", "nltk", "huggingface", "transformers", "gensim", "pytorch", "tensorflow", "bert"],
+            "Data Collection": ["corpus", "dataset", "data collection", "scraping", "crawling"],
+            "Evaluation Metrics": ["accuracy", "precision", "recall", "f1", "bleu", "rouge", "evaluation", "metric"]
+        }
+        
+        # Initialize categories
+        categories = {category: [] for category in category_keywords}
+        
+        # Check if column exists
+        if column not in self.df.columns:
+            print(f"Column '{column}' not found in the dataset.")
+            return categories
+        
+        # Iterate through posts and categorize
+        for i, post_text in enumerate(self.df[column]):
+            if not isinstance(post_text, str):
+                continue
+                
+            post_text = post_text.lower()
+            
+            # Check each category
+            for category, keywords in category_keywords.items():
+                for keyword in keywords:
+                    if keyword in post_text:
+                        categories[category].append(i)
+                        break
+        
+        # Remove categories with fewer than min_posts_per_category posts
+        categories = {k: v for k, v in categories.items() if len(v) >= min_posts_per_category}
+        
+        # Save categorized indices
+        self.categories["keyword_based"] = categories
+        
+        # Print statistics
+        print("\nKeyword-based categorization results:")
+        for category, indices in categories.items():
+            print(f"{category}: {len(indices)} posts")
+            
+        return categories
+    
+    def task_based_categorization(self, column: str = 'processed_title', 
+                                min_posts_per_category: int = 10) -> Dict[str, List[int]]:
+        """
+        Categorize posts based on NLP tasks in the title.
+        
+        Args:
+            column (str, optional): Column to search for task keywords. Defaults to 'processed_title'.
+            min_posts_per_category (int, optional): Minimum posts required for a category. Defaults to 10.
+            
+        Returns:
+            Dict[str, List[int]]: Dictionary mapping category names to list of post indices.
+        """
+        print(f"Performing task-based categorization on {column}...")
+        
+        # Define NLP tasks and their keywords
+        task_keywords = {
+            "Text Classification": ["classification", "classifier", "classify", "categorization", "categorize"],
+            "Named Entity Recognition": ["ner", "named entity", "entity recognition", "entity extraction"],
+            "Sentiment Analysis": ["sentiment", "emotion", "polarity", "opinion"],
+            "Text Summarization": ["summary", "summarization", "summarize", "summarizing"],
+            "Machine Translation": ["translation", "translate", "translator", "machine translation", "mt"],
+            "Question Answering": ["question answering", "qa system", "answer questions"],
+            "Topic Modeling": ["topic", "lda", "topic model", "latent dirichlet"],
+            "Word Embeddings": ["word2vec", "glove", "embedding", "word embedding", "vector"],
+            "Tokenization": ["tokenization", "tokenize", "tokenizer", "tokens"],
+            "Lemmatization": ["lemmatization", "lemmatize", "lemmatizer", "lemma"],
+            "Stemming": ["stemming", "stem", "stemmer", "porter"],
+            "Language Identification": ["language identification", "language detection", "detect language", "identify language"],
+            "Text Similarity": ["similarity", "similar text", "document similarity", "semantic similarity"],
+            "Part-of-Speech Tagging": ["pos", "part of speech", "tagging", "tagger"],
+            "Dependency Parsing": ["dependency parsing", "dependency parser", "syntactic parsing"],
+            "Coreference Resolution": ["coreference", "coreference resolution", "anaphora"],
+            "Text Generation": ["text generation", "generate text", "text generator", "gpt"]
+        }
+        
+        # Initialize categories
+        categories = {task: [] for task in task_keywords}
+        
+        # Check if column exists
+        if column not in self.df.columns:
+            print(f"Column '{column}' not found in the dataset.")
+            return categories
+        
+        # Iterate through posts and categorize
+        for i, post_text in enumerate(self.df[column]):
+            if not isinstance(post_text, str):
+                continue
+                
+            post_text = post_text.lower()
+            
+            # Check each task
+            for task, keywords in task_keywords.items():
+                for keyword in keywords:
+                    if keyword in post_text:
+                        categories[task].append(i)
+                        break
+        
+        # Remove tasks with fewer than min_posts_per_category posts
+        categories = {k: v for k, v in categories.items() if len(v) >= min_posts_per_category}
+        
+        # Save categorized indices
+        self.categories["task_based"] = categories
+        
+        # Print statistics
+        print("\nTask-based categorization results:")
+        for task, indices in categories.items():
+            print(f"{task}: {len(indices)} posts")
+            
+        return categories
+    
+    def question_type_categorization(self):
+        """
+        Categorize posts based on question type (What, Why, How).
+        """
+        print("Performing question type categorization...")
+        
+        # Create patterns for different question types
+        patterns = {
+            "what": r'\bwhat\b|\bwhich\b',
+            "why": r'\bwhy\b',
+            "how": r'\bhow\b',
+            "when": r'\bwhen\b',
+            "where": r'\bwhere\b'
+        }
+        
+        # Initialize categories
+        question_categories = {cat: [] for cat in patterns.keys()}
+        
+        # Iterate through posts and categorize them
+        for idx, row in self.df.iterrows():
+            # Make sure we're checking the original title, not processed_title
+            if 'title' not in row:
+                continue
+            
+            title = row['title'].lower() if isinstance(row['title'], str) else ""
+            
+            # Check each pattern and assign to appropriate category
+            for qtype, pattern in patterns.items():
+                if re.search(pattern, title):
+                    question_categories[qtype].append(idx)
+                    break  # Assign to first matching category only
+        
+        # Save categorization results
+        self._save_categorization("question_type", question_categories)
+        
+        # Print results
+        print("\nQuestion Type categorization results:")
+        for qtype, indices in question_categories.items():
+            print(f"{qtype.capitalize()}: {len(indices)} posts")
+        
+        return question_categories
+    
+    def library_based_categorization(self, column: str = 'processed_title', 
+                                  min_posts_per_category: int = 10) -> Dict[str, List[int]]:
+        """
+        Categorize posts based on NLP libraries mentioned.
+        
+        Args:
+            column (str, optional): Column to search for library mentions. Defaults to 'processed_title'.
+            min_posts_per_category (int, optional): Minimum posts required for a category. Defaults to 10.
+            
+        Returns:
+            Dict[str, List[int]]: Dictionary mapping category names to list of post indices.
+        """
+        print(f"Performing library-based categorization on {column}...")
+        
+        # Define NLP libraries and their aliases
+        library_keywords = {
+            "NLTK": ["nltk", "natural language toolkit"],
+            "spaCy": ["spacy", "spacy nlp"],
+            "Hugging Face": ["huggingface", "hugging face", "transformers", "🤗"],
+            "BERT": ["bert", "distilbert", "roberta", "albert"],
+            "Word2Vec": ["word2vec", "word vectors", "word embedding"],
+            "GloVe": ["glove", "global vectors"],
+            "fastText": ["fasttext"],
+            "Gensim": ["gensim"],
+            "Stanford NLP": ["stanford nlp", "stanford core nlp", "stanfordnlp", "stanza"],
+            "OpenNLP": ["opennlp"],
+            "TextBlob": ["textblob"],
+            "GPT": ["gpt", "gpt-2", "gpt-3", "gpt-4", "chatgpt"],
+            "WordNet": ["wordnet"],
+            "TensorFlow": ["tensorflow", "tf"],
+            "PyTorch": ["pytorch", "torch"],
+            "scikit-learn": ["scikit learn", "sklearn"]
+        }
+        
+        # Initialize categories
+        categories = {library: [] for library in library_keywords}
+        
+        # Check if column exists
+        if column not in self.df.columns:
+            print(f"Column '{column}' not found in the dataset.")
+            return categories
+        
+        # Check tags column as well if available
+        tags_available = 'tags' in self.df.columns
+        
+        # Iterate through posts and categorize
+        for i, post_text in enumerate(self.df[column]):
+            if not isinstance(post_text, str):
+                continue
+                
+            post_text = post_text.lower()
+            
+            # Get tags for this post if available
+            post_tags = []
+            if tags_available:
+                tags = self.df.iloc[i]['tags']
+                if isinstance(tags, str):
+                    try:
+                        # Try to convert string representation of list to actual list
+                        if tags.startswith('[') and tags.endswith(']'):
+                            post_tags = eval(tags)
+                        else:
+                            post_tags = tags.split()
+                    except:
+                        post_tags = []
+                elif isinstance(tags, list):
+                    post_tags = tags
+            
+            # Convert tags to lowercase for matching
+            post_tags = [tag.lower() for tag in post_tags]
+            
+            # Check each library in title and tags
+            for library, keywords in library_keywords.items():
+                # Check in title
+                for keyword in keywords:
+                    if keyword in post_text:
+                        categories[library].append(i)
+                        break
+                
+                # Check in tags if not already categorized
+                if i not in categories[library] and tags_available:
+                    for keyword in keywords:
+                        if any(keyword in tag for tag in post_tags):
+                            categories[library].append(i)
+                            break
+        
+        # Remove libraries with fewer than min_posts_per_category posts
+        categories = {k: v for k, v in categories.items() if len(v) >= min_posts_per_category}
+        
+        # Save categorized indices
+        self.categories["library_based"] = categories
+        
+        # Print statistics
+        print("\nLibrary-based categorization results:")
+        for library, indices in categories.items():
+            print(f"{library}: {len(indices)} posts")
+            
+        return categories
+    
+    def save_categories_to_files(self):
+        """
+        Save categorized posts to CSV files.
+        """
+        print("Saving categorized posts to files...")
+        
+        # Create summary file
+        summary = {
+            "categorization_methods": {},
+            "total_categorized_posts": 0,
+            "unique_categorized_posts": set()
+        }
+        
+        # Process each categorization method
+        for method, categories in self.categories.items():
+            print(f"\nSaving {method} categories...")
+            
+            method_dir = f"../data/categories/{method}"
+            os.makedirs(method_dir, exist_ok=True)
+            
+            # Create summary entry for this method
+            summary["categorization_methods"][method] = {
+                "categories": {},
+                "total_posts": 0
+            }
+            
+            # Save each category to a file
+            for category, indices in categories.items():
+                # Create a subset of the dataframe with these posts
+                category_df = self.df.iloc[indices].copy()
+                
+                # Add indices to unique categorized posts set
+                summary["unique_categorized_posts"].update(indices)
+                
+                # Update summary counts
+                summary["categorization_methods"][method]["categories"][category] = len(indices)
+                summary["categorization_methods"][method]["total_posts"] += len(indices)
+                
+                # Clean category name for filename
+                clean_category = category.replace(' ', '_').replace('/', '_')
+                
+                # Save to CSV
+                output_path = f"{method_dir}/{clean_category}.csv"
+                category_df.to_csv(output_path, index=False)
+                print(f"Saved {len(indices)} posts to {output_path}")
+        
+        # Calculate total unique categorized posts
+        summary["total_categorized_posts"] = len(summary["unique_categorized_posts"])
+        
+        # Convert set to list for JSON serialization
+        summary["unique_categorized_posts"] = list(summary["unique_categorized_posts"])
+        
+        # Save summary to JSON
+        with open("../data/categories/categorization_summary.json", "w") as f:
+            json.dump({
+                "categorization_methods": summary["categorization_methods"],
+                "total_categorized_posts": summary["total_categorized_posts"],
+                "total_unique_posts": len(summary["unique_categorized_posts"])
+            }, f, indent=2)
+        
+        print(f"\nCategorization complete. Total unique categorized posts: {summary['total_categorized_posts']}")
+    
+    def categorize_all(self):
+        """
+        Perform all categorization methods.
+        """
+        # Perform keyword-based categorization
+        self.keyword_based_categorization()
+        
+        # Perform task-based categorization
+        self.task_based_categorization()
+        
+        # Perform question type categorization
+        self.question_type_categorization()
+        
+        # Perform library-based categorization
+        self.library_based_categorization()
+        
+        # Save categories to files
+        self.save_categories_to_files()
+
+    def _save_categorization(self, category_type, categories):
+        """
+        Save categorization results to JSON files.
+        
+        Args:
+            category_type (str): The type of categorization (e.g., 'keyword_based', 'task_based').
+            categories (dict): Dictionary mapping category names to lists of post indices.
+        """
+        print(f"\n{category_type.replace('_', ' ').title()} categorization results:")
+        category_dir = os.path.join("../data/categories", category_type)
+        os.makedirs(category_dir, exist_ok=True)
+        
+        # Create a CSV lookup file for this category type
+        lookup_file = os.path.join("../data/categories", f"{category_type}_categories.csv")
+        with open(lookup_file, 'w') as f:
+            f.write("category,count,file_path\n")
+            
+            for category, post_indices in categories.items():
+                if len(post_indices) > 0:
+                    # Print summary
+                    print(f"{category.replace('_', ' ').title()}: {len(post_indices)} posts")
+                    
+                    # Save to CSV lookup
+                    category_filename = f"{category.lower().replace(' ', '_')}.json"
+                    file_path = os.path.join(category_type, category_filename)
+                    f.write(f"{category},{len(post_indices)},{file_path}\n")
+                    
+                    # Save category data
+                    category_data = {
+                        "category": category,
+                        "post_count": len(post_indices),
+                        "posts": self.df.iloc[post_indices].to_dict(orient='records')
+                    }
+                    with open(os.path.join(category_dir, category_filename), 'w') as cat_file:
+                        json.dump(category_data, cat_file, indent=2)
+
+
+if __name__ == "__main__":
+    try:
+        # Path to preprocessed dataset
+        data_path = "../data/preprocessed_nlp_dataset.csv"
+        
+        # Create categorizer
+        categorizer = PostCategorizer(data_path)
+        
+        # Perform all categorizations
+        categorizer.categorize_all()
+        
+    except Exception as e:
+        print(f"Error: {e}") 
+
+# preprocessor.py - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/preprocessor.py
+import pandas as pd
+import re
+import string
+import nltk
+from bs4 import BeautifulSoup
+import html
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from typing import List, Dict, Any, Union
+
+# Download necessary NLTK resources
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
+
+class DataPreprocessor:
+    """
+    Preprocessor for Stack Overflow NLP dataset.
+    """
+    
+    def __init__(self, remove_code: bool = False):
+        """
+        Initialize the preprocessor.
+        
+        Args:
+            remove_code (bool, optional): Whether to remove code blocks from text. Defaults to False.
+        """
+        self.remove_code = remove_code
+        self.stop_words = set(stopwords.words('english'))
+        
+    def clean_html(self, text: str) -> str:
+        """
+        Remove HTML tags and decode HTML entities.
+        
+        Args:
+            text (str): Text containing HTML.
+            
+        Returns:
+            str: Cleaned text.
+        """
+        if not isinstance(text, str):
+            return ""
+        
+        # Decode HTML entities
+        text = html.unescape(text)
+        
+        # Remove HTML tags
+        soup = BeautifulSoup(text, "lxml")
+        
+        # Optionally remove code blocks
+        if self.remove_code:
+            for code in soup.find_all(['code', 'pre']):
+                code.decompose()
+        
+        # Get text
+        text = soup.get_text()
+        
+        return text
+    
+    def remove_urls(self, text: str) -> str:
+        """
+        Remove URLs from text.
+        
+        Args:
+            text (str): Input text.
+            
+        Returns:
+            str: Text with URLs removed.
+        """
+        if not isinstance(text, str):
+            return ""
+        
+        url_pattern = re.compile(r'https?://\S+|www\.\S+')
+        return url_pattern.sub('', text)
+    
+    def remove_punctuation(self, text: str) -> str:
+        """
+        Remove punctuation from text.
+        
+        Args:
+            text (str): Input text.
+            
+        Returns:
+            str: Text with punctuation removed.
+        """
+        if not isinstance(text, str):
+            return ""
+        
+        translator = str.maketrans('', '', string.punctuation)
+        return text.translate(translator)
+    
+    def tokenize(self, text: str) -> List[str]:
+        """
+        Tokenize text into words.
+        
+        Args:
+            text (str): Input text.
+            
+        Returns:
+            List[str]: List of tokens.
+        """
+        if not isinstance(text, str):
+            return []
+        
+        return word_tokenize(text)
+    
+    def remove_stopwords(self, tokens: List[str]) -> List[str]:
+        """
+        Remove stopwords from a list of tokens.
+        
+        Args:
+            tokens (List[str]): List of tokens.
+            
+        Returns:
+            List[str]: Tokens with stopwords removed.
+        """
+        return [word for word in tokens if word.lower() not in self.stop_words]
+    
+    def preprocess_text(self, text: str, remove_stopwords: bool = True) -> str:
+        """
+        Apply full preprocessing pipeline to text.
+        
+        Args:
+            text (str): Input text.
+            remove_stopwords (bool, optional): Whether to remove stopwords. Defaults to True.
+            
+        Returns:
+            str: Preprocessed text.
+        """
+        if not isinstance(text, str):
+            return ""
+        
+        # Clean HTML
+        text = self.clean_html(text)
+        
+        # Remove URLs
+        text = self.remove_urls(text)
+        
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Remove punctuation
+        text = self.remove_punctuation(text)
+        
+        # Tokenize
+        tokens = self.tokenize(text)
+        
+        # Remove stopwords if requested
+        if remove_stopwords:
+            tokens = self.remove_stopwords(tokens)
+        
+        # Join tokens back into text
+        preprocessed_text = ' '.join(tokens)
+        
+        return preprocessed_text
+    
+    def preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Preprocess all text columns in the DataFrame.
+        
+        Args:
+            df (pd.DataFrame): Input DataFrame.
+            
+        Returns:
+            pd.DataFrame: Preprocessed DataFrame.
+        """
+        # Create a copy to avoid modifying the original
+        processed_df = df.copy()
+        
+        # Process title column
+        print("Preprocessing titles...")
+        processed_df['processed_title'] = processed_df['title'].apply(
+            lambda x: self.preprocess_text(x, remove_stopwords=False)
+        )
+        
+        # Process description column
+        print("Preprocessing descriptions...")
+        processed_df['processed_description'] = processed_df['description'].apply(
+            lambda x: self.preprocess_text(x)
+        )
+        
+        # Process accepted_answer column
+        print("Preprocessing accepted answers...")
+        processed_df['processed_accepted_answer'] = processed_df['accepted_answer'].apply(
+            lambda x: self.preprocess_text(x)
+        )
+        
+        # Process other_answers column (if it's a list of strings)
+        if 'other_answers' in processed_df.columns:
+            print("Preprocessing other answers...")
+            
+            def process_answers(answers_list):
+                if isinstance(answers_list, list):
+                    return [self.preprocess_text(answer) for answer in answers_list]
+                return []
+            
+            processed_df['processed_other_answers'] = processed_df['other_answers'].apply(process_answers)
+        
+        # Process tags column (if it's a list of strings)
+        if 'tags' in processed_df.columns:
+            print("Preprocessing tags...")
+            
+            def process_tags(tags_list):
+                if isinstance(tags_list, list):
+                    return [tag.lower() for tag in tags_list]
+                return []
+            
+            processed_df['processed_tags'] = processed_df['tags'].apply(process_tags)
+        
+        print("Preprocessing complete.")
+        return processed_df
+
+
+if __name__ == "__main__":
+    # Test the preprocessor
+    try:
+        # Load dataset
+        dataset_path = "../data/nlp_stackoverflow_dataset.csv"
+        df = pd.read_csv(dataset_path)
+        
+        # Create preprocessor
+        preprocessor = DataPreprocessor(remove_code=True)
+        
+        # Preprocess data
+        processed_df = preprocessor.preprocess_dataframe(df)
+        
+        # Save preprocessed data
+        processed_df.to_csv("../data/preprocessed_nlp_dataset.csv", index=False)
+        print(f"Preprocessed dataset saved to ../data/preprocessed_nlp_dataset.csv")
+        
+    except Exception as e:
+        print(f"Error: {e}") 
+
+
+# data_visualizer.py - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/data_visualizer.py
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+import seaborn as sns
+from collections import Counter
+from datetime import datetime
+import os
+from typing import List, Dict, Any, Union, Tuple
+
+plt.style.use('ggplot')
+
+class DataVisualizer:
+    """
+    Class for visualizing NLP Stack Overflow data.
+    """
+    
+    def __init__(self, data_path: str):
+        """
+        Initialize the visualizer with dataset path.
+        
+        Args:
+            data_path (str): Path to the preprocessed dataset.
+        """
+        self.data_path = data_path
+        self.df = pd.read_csv(data_path)
+        
+        # Create output directory for visualizations
+        os.makedirs("../data/visualizations", exist_ok=True)
+        
+    def generate_wordcloud(self, text_column: str, title: str, filename: str, 
+                          width: int = 800, height: int = 400, 
+                          max_words: int = 200, background_color: str = 'white'):
+        """
+        Generate a word cloud from text data.
+        
+        Args:
+            text_column (str): Column name containing text data.
+            title (str): Title for the word cloud.
+            filename (str): Output filename.
+            width (int, optional): Width of the word cloud image. Defaults to 800.
+            height (int, optional): Height of the word cloud image. Defaults to 400.
+            max_words (int, optional): Maximum number of words to include. Defaults to 200.
+            background_color (str, optional): Background color. Defaults to 'white'.
+        """
+        print(f"Generating word cloud for {text_column}...")
+        
+        # Combine all text into a single string
+        text_data = ' '.join(self.df[text_column].dropna().astype(str))
+        
+        # Generate word cloud
+        wordcloud = WordCloud(
+            width=width, 
+            height=height,
+            max_words=max_words,
+            background_color=background_color,
+            contour_width=1,
+            contour_color='steelblue'
+        ).generate(text_data)
+        
+        # Plot the word cloud
+        plt.figure(figsize=(width/100, height/100))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title(title)
+        plt.tight_layout(pad=0)
+        
+        # Save the word cloud
+        output_path = f"../data/visualizations/{filename}.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Word cloud saved to {output_path}")
+    
+    def plot_top_tags(self, n: int = 20, filename: str = "top_tags"):
+        """
+        Plot the most common tags associated with NLP questions.
+        
+        Args:
+            n (int, optional): Number of top tags to show. Defaults to 20.
+            filename (str, optional): Output filename. Defaults to "top_tags".
+        """
+        print(f"Plotting top {n} tags...")
+        
+        # Check if tags column is available and is a list
+        if 'tags' not in self.df.columns:
+            print("Tags column not found.")
+            return
+        
+        # Get all tags and count them
+        all_tags = []
+        for tag_list in self.df['tags']:
+            try:
+                if isinstance(tag_list, str):
+                    # Convert string representation of list to actual list
+                    if tag_list.startswith('[') and tag_list.endswith(']'):
+                        tag_list = eval(tag_list)
+                    else:
+                        tag_list = tag_list.split()
+                
+                if isinstance(tag_list, list):
+                    all_tags.extend(tag_list)
+            except:
+                continue
+        
+        # Count tags
+        tag_counts = Counter(all_tags)
+        
+        # Get top N tags
+        top_tags = tag_counts.most_common(n)
+        
+        # Extract tags and counts
+        tags, counts = zip(*top_tags)
+        
+        # Create horizontal bar chart
+        plt.figure(figsize=(10, 8))
+        bars = plt.barh(tags, counts, color='skyblue')
+        
+        # Add count labels to the bars
+        for bar in bars:
+            width = bar.get_width()
+            label_position = width + (width * 0.01)
+            plt.text(label_position, bar.get_y() + bar.get_height()/2, f'{int(width)}',
+                    va='center', fontsize=8)
+        
+        plt.xlabel('Count')
+        plt.ylabel('Tags')
+        plt.title(f'Top {n} Tags Associated with NLP Questions')
+        plt.gca().invert_yaxis()  # Invert to have highest count at the top
+        plt.tight_layout()
+        
+        # Save the plot
+        output_path = f"../data/visualizations/{filename}.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Top tags plot saved to {output_path}")
+    
+    def plot_question_frequency_over_time(self, filename: str = "question_frequency"):
+        """
+        Plot the frequency of NLP questions over time.
+        
+        Args:
+            filename (str, optional): Output filename. Defaults to "question_frequency".
+        """
+        print("Plotting question frequency over time...")
+        
+        # Check if creation_date column is available
+        if 'creation_date' not in self.df.columns:
+            print("Creation date column not found.")
+            return
+        
+        # Convert timestamp to datetime and extract year and month
+        try:
+            self.df['date'] = pd.to_datetime(self.df['creation_date'], unit='s')
+            self.df['year_month'] = self.df['date'].dt.to_period('M')
+            
+            # Count questions by year and month
+            question_counts = self.df.groupby('year_month').size()
+            
+            # Plot the trend
+            plt.figure(figsize=(14, 6))
+            question_counts.plot(kind='line', marker='o', linestyle='-', color='blue')
+            
+            plt.title('NLP Questions Frequency Over Time')
+            plt.xlabel('Time (Year-Month)')
+            plt.ylabel('Number of Questions')
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            
+            # Save the plot
+            output_path = f"../data/visualizations/{filename}.png"
+            plt.savefig(output_path, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            print(f"Question frequency plot saved to {output_path}")
+            
+        except Exception as e:
+            print(f"Error plotting question frequency: {e}")
+    
+    def plot_views_vs_answers(self, filename: str = "views_vs_answers"):
+        """
+        Plot the relationship between views and number of answers.
+        
+        Args:
+            filename (str, optional): Output filename. Defaults to "views_vs_answers".
+        """
+        print("Plotting views vs. answers...")
+        
+        # Check if required columns are available
+        if 'view_count' not in self.df.columns or 'answer_count' not in self.df.columns:
+            print("View count or answer count columns not found.")
+            return
+        
+        # Create scatter plot
+        plt.figure(figsize=(10, 6))
+        
+        # Apply log transformation to handle skewed distributions
+        sns.scatterplot(
+            x=np.log1p(self.df['view_count']), 
+            y=np.log1p(self.df['answer_count']),
+            alpha=0.5
+        )
+        
+        # Add regression line
+        sns.regplot(
+            x=np.log1p(self.df['view_count']), 
+            y=np.log1p(self.df['answer_count']),
+            scatter=False, 
+            color='red'
+        )
+        
+        plt.title('Relationship Between Views and Answers (Log Scale)')
+        plt.xlabel('Log(View Count + 1)')
+        plt.ylabel('Log(Answer Count + 1)')
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
+        # Save the plot
+        output_path = f"../data/visualizations/{filename}.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Views vs. answers plot saved to {output_path}")
+    
+    def generate_visualizations(self):
+        """
+        Generate all visualizations.
+        """
+        # Generate word cloud from processed titles
+        if 'processed_title' in self.df.columns:
+            self.generate_wordcloud(
+                'processed_title',
+                'Word Cloud of NLP Question Titles',
+                'title_wordcloud'
+            )
+        
+        # Generate word cloud from processed descriptions
+        if 'processed_description' in self.df.columns:
+            self.generate_wordcloud(
+                'processed_description',
+                'Word Cloud of NLP Question Descriptions',
+                'description_wordcloud'
+            )
+        
+        # Plot top tags
+        self.plot_top_tags()
+        
+        # Plot question frequency over time
+        self.plot_question_frequency_over_time()
+        
+        # Plot views vs. answers
+        self.plot_views_vs_answers()
+
+
+if __name__ == "__main__":
+    try:
+        # Path to preprocessed dataset
+        data_path = "../data/preprocessed_nlp_dataset.csv"
+        
+        # Create visualizer
+        visualizer = DataVisualizer(data_path)
+        
+        # Generate all visualizations
+        visualizer.generate_visualizations()
+        
+    except Exception as e:
+        print(f"Error: {e}") 
+
+# data_collector.py - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/data_collector.py
+import requests
+import pandas as pd
+import time
+import os
+from typing import List, Dict, Any
+import csv # Import the csv library
+
+class StackOverflowDataCollector:
+    """
+    A class to collect NLP-related posts from Stack Overflow using the Stack Exchange API.
+    """
+
+    def __init__(self, api_key: str = None):
+        """
+        Initialize the collector with an API key.
+        Args:
+            api_key (str, optional): Stack Exchange API key. Defaults to None.
+        """
+        self.base_url = "https://api.stackexchange.com/2.3"
+        self.api_key = api_key
+        self.backoff_time = 1 # Initial backoff time
+
+    def get_questions(self, tag: str = "nlp", page_size: int = 100, max_questions: int = 20000) -> List[Dict[str, Any]]:
+        """
+        Collect questions with specified tag from Stack Overflow.
+        Args:
+            tag (str, optional): Tag to filter questions. Defaults to "nlp".
+            page_size (int, optional): Number of items per page. Defaults to 100.
+            max_questions (int, optional): Maximum number of questions to retrieve. Defaults to 20000.
+
+        Returns:
+            List[Dict[str, Any]]: List of question data dictionaries.
+        """
+        questions = []
+        page = 1
+        has_more = True
+
+        # Create data directory if it doesn't exist
+        os.makedirs("../data", exist_ok=True)
+
+        print(f"Collecting questions with tag [{tag}]...")
+
+        while has_more and len(questions) < max_questions:
+            # Construct API URL
+            url = f"{self.base_url}/questions"
+
+            # Define parameters
+            params = {
+                'page': page,
+                'pagesize': page_size,
+                'order': 'desc',
+                'sort': 'creation', # Changed to 'creation'
+                'tagged': tag,
+                'site': 'stackoverflow',
+                'filter': '!-*jbN-o8P3E5', # Default filter with some enhancements
+            }
+
+            if self.api_key:
+                params['key'] = self.api_key
+
+            # Make API request
+            try:
+                response = requests.get(url, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                # Extract questions
+                items = data.get('items', [])
+                questions.extend(items)
+
+                print(f"Collected {len(questions)} questions so far...")
+
+                # Check if there are more pages
+                has_more = data.get('has_more', False)
+
+                # Update page number
+                page += 1
+
+                # Respect API quota and avoid throttling
+                if 'backoff' in data:
+                    self.backoff_time = data['backoff']
+                    print(f"API backoff requested. Waiting for {self.backoff_time} seconds...")
+                    time.sleep(self.backoff_time)
+                else:
+                    time.sleep(1) # Be nice to the API
+
+                # Save intermediate results every 1000 questions
+                if len(questions) % 1000 == 0:
+                    print(f"Saving intermediate result with {len(questions)} questions...")
+                    intermediate_df = pd.DataFrame({
+                        'question_id': [q.get('question_id') for q in questions],
+                        'title': [q.get('title') for q in questions],
+                        'body': [q.get('body') for q in questions],
+                        'tags': [q.get('tags') for q in questions],
+                        'creation_date': [q.get('creation_date') for q in questions],
+                        'view_count': [q.get('view_count') for q in questions],
+                        'score': [q.get('score') for q in questions],
+                        'answer_count': [q.get('answer_count') for q in questions],
+                        'is_answered': [q.get('is_answered') for q in questions],
+                    })
+                    intermediate_df.to_csv(f"../data/{tag}_questions_intermediate_{len(questions)}.csv", index=False) # Added tag to intermediate filename
+
+
+            except requests.exceptions.RequestException as e:
+                print(f"Error making request: {e}")
+                time.sleep(5) # Wait before retrying
+
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                break
+
+
+        print(f"Collected a total of {len(questions)} questions.")
+        return questions
+
+    def get_answers_for_question(self, question_id: int) -> List[Dict[str, Any]]:
+        """
+        Get all answers for a specific question.
+        Args:
+            question_id (int): ID of the question.
+        Returns:
+            List[Dict[str, Any]]: List of answer data dictionaries.
+        """
+        url = f"{self.base_url}/questions/{question_id}/answers"
+
+        params = {
+            'order': 'desc',
+            'sort': 'votes',
+            'site': 'stackoverflow',
+            'filter': '!-*jbN-o8P3E5', # Default filter with some enhancements
+        }
+
+        if self.api_key:
+            params['key'] = self.api_key
+
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            # Check for backoff in answer requests and wait
+            if 'backoff' in data:
+                self.backoff_time = data['backoff']
+                print(f"API backoff requested during answer fetching. Waiting for {self.backoff_time} seconds...")
+                time.sleep(self.backoff_time)
+            else:
+                time.sleep(1) # Be nice to the API between answer calls
+
+
+            return data.get('items', [])
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error getting answers for question {question_id}: {e}")
+            # Implement retry logic or return empty list on failure
+            return []
+
+        except Exception as e:
+            print(f"Unexpected error getting answers for question {question_id}: {e}")
+            return []
+
+
+    # Modified create_dataset to accept filename and save incrementally
+    def create_dataset(self, questions: List[Dict[str, Any]], filename: str = "nlp_stackoverflow_dataset.csv"):
+        """
+        Create a DataFrame with questions and their accepted answers and save incrementally to a CSV file.
+        Args:
+            questions (List[Dict[str, Any]]): List of question data dictionaries.
+            filename (str, optional): Output filename to save the dataset. Defaults to "nlp_stackoverflow_dataset.csv".
+        """
+        output_path = f"../data/{filename}"
+        total_questions = len(questions)
+        # Define the fieldnames for the CSV, including the new fields from API
+        fieldnames = ['question_id', 'title', 'description', 'tags', 'creation_date', 'view_count', 'score', 'answer_count', 'is_answered', 'accepted_answer', 'other_answers']
+
+
+        # Check if file exists to decide whether to write header
+        # Write header if the file does not exist or is empty
+        write_header = not os.path.exists(output_path) or os.path.getsize(output_path) == 0
+
+        # Open the file in append mode ('a')
+        # use newline='' to prevent extra blank rows in CSV
+        # use encoding='utf-8' to handle various characters
+        with open(output_path, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            if write_header:
+                writer.writeheader()
+                print(f"Created new dataset file: {output_path}")
+            else:
+                print(f"Appending to existing dataset file: {output_path}")
+
+
+            print(f"Starting to process questions and save incrementally to {output_path}")
+
+            # Optional: Add logic here to skip questions already in the file if rerunning
+            # This is more complex as it requires reading the existing file's IDs first.
+            # For now, it will process all questions and append, which might create duplicates
+            # if you rerun after an interruption without clearing the file.
+
+            for i, question in enumerate(questions):
+                question_id = question.get('question_id')
+                # You could add a check here if question_id is already in the CSV
+                # For example, load existing IDs into a set before the loop.
+
+                print(f"Processing question {i+1}/{total_questions}: {question_id}")
+
+                # Get answers for this question
+                answers = self.get_answers_for_question(question_id)
+
+                accepted_answer = None
+                other_answers_list = []
+
+                for answer in answers:
+                    if answer.get('is_accepted', False):
+                        accepted_answer = answer.get('body', '')
+                    else:
+                        other_answers_list.append(answer.get('body', ''))
+
+                # Prepare the data row as a dictionary
+                row_data = {
+                    'question_id': question_id,
+                    'title': question.get('title', ''),
+                    'description': question.get('body', ''),
+                    'tags': question.get('tags', []),
+                    'creation_date': question.get('creation_date'),
+                    'view_count': question.get('view_count'),
+                    'score': question.get('score'),
+                    'answer_count': question.get('answer_count'),
+                    'is_answered': question.get('is_answered'),
+                    'accepted_answer': accepted_answer,
+                    'other_answers': other_answers_list[:5] # Include up to 5 additional answers
+                }
+
+                # Write the row to the CSV
+                try:
+                    writer.writerow(row_data)
+                    # Optional: Flush the buffer to ensure data is written to disk more frequently
+                    # This can be useful if you are worried about losing data on sudden interruption
+                    # csvfile.flush()
+                except Exception as e:
+                    print(f"Error writing row for question {question_id}: {e}")
+
+
+        print(f"Finished processing questions. Data saved to {output_path}")
+
+
+    def save_dataset(self, df: pd.DataFrame, filename: str = "nlp_dataset.csv"):
+        """
+        Save a full DataFrame to a CSV file.
+        This method is less relevant now if create_dataset is used for primary incremental saving.
+        It's kept for potential compatibility or other uses.
+
+        Args:
+            df (pd.DataFrame): DataFrame to save.
+            filename (str, optional): Output filename. Defaults to "nlp_dataset.csv".
+        """
+        # With incremental saving in create_dataset, this method might not be the primary way
+        # the dataset is saved in the main pipeline anymore.
+        print(f"Dataset saving handled by create_dataset function for incremental writes.")
+        # If you still need to save a DataFrame (e.g., after loading the full CSV), uncomment the line below:
+        # df.to_csv(f"../data/{filename}", index=False)
+        # print(f"Dataset saved to ../data/{filename} using save_dataset.")
+
+
+if __name__ == "__main__":
+    # Example usage of the data collector
+    # You should get an API key from Stack Exchange for better rate limits
+    # https://stackapps.com/apps/oauth/register
+    API_KEY = "rl_QSELmsmpZPK2JvKfEHYZ8Pa9e" # Add your API key here
+
+    collector = StackOverflowDataCollector(api_key=API_KEY)
+
+    # Example of collecting questions for a tag (initial metadata)
+    # This will save intermediate files but does not include answer bodies yet
+    # questions_metadata = collector.get_questions(tag="nlp", max_questions=100)
+    # print(f"Collected initial metadata for {len(questions_metadata)} questions.")
+
+    # Example of processing collected questions and saving incrementally with answers
+    # This is the primary method for building the full dataset now
+    # Assuming 'questions_metadata' list is populated from a previous get_questions call or intermediate file load
+    # For a standalone test, you might need to call get_questions first:
+    test_questions = collector.get_questions(tag="nlp", max_questions=50) # Collect a small number for testing
+    if test_questions:
+        collector.create_dataset(test_questions, filename="test_nlp_dataset.csv")
+        print("Test dataset created with incremental saving.")
+    else:
+        print("No questions collected for test dataset creation.")
+
+    # The preprocess, visualize, and categorize steps would typically load the completed CSV file
+    # e.g., pd.read_csv("../data/test_nlp_dataset.csv")
+
+
+# README.md - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/README.md
+### NLP Knowledge Base - Source Code
+
+> 🚀 The data pipeline that powers the NLP Knowledge Base project, transforming raw Stack Exchange data into organized, categorized knowledge.
+
+[![Pipeline Status](https://img.shields.io/badge/pipeline-active-success.svg)](https://github.com/shubharthaksangharsha/nlp-knowledge-base)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
+## 🗺️ Directory Structure
+
+```
+src/
+├── 📥 data_collector.py    # Stack Exchange API integration
+├── 🧹 preprocessor.py      # Data cleaning and text preprocessing
+├── 📊 data_visualizer.py   # Visualization generation
+├── 🏷️ categorizer.py       # Post categorization logic
+├── 🎯 main.py             # Pipeline orchestration
+└── 📦 __init__.py         # Package initialization
+```
+
+## 🔨 Components
+
+### 1. 📥 Data Collection (`data_collector.py`)
+- 🔌 Integrates with Stack Exchange API
+- 📡 Fetches NLP-related Q&A
+- ⚡ Smart rate limiting and pagination
+- 🔄 Incremental updates support
+
+### 2. 🧹 Data Preprocessing (`preprocessor.py`)
+- 🧼 Text cleaning and normalization
+- 🔧 HTML entity handling
+- 💻 Code block preservation
+- 📝 Content standardization
+
+### 3. 📊 Data Visualization (`data_visualizer.py`)
+- 📈 Trend analysis and insights
+- 🎨 Interactive visualizations
+- 🔍 Pattern discovery
+- 📉 Usage statistics
+
+### 4. 🏷️ Categorization (`categorizer.py`)
+- 🎯 Multi-scheme categorization
+- 🤖 Intelligent category assignment
+- 📑 Content organization
+- 🔄 Dynamic rule updates
+
+### 5. 🎯 Pipeline Orchestration (`main.py`)
+- 🔄 End-to-end workflow
+- 📝 Comprehensive logging
+- ⚠️ Error handling
+- 🔍 Progress monitoring
+
+## 🚀 Usage
+
+### Complete Pipeline
+
+```bash
+# Run the entire pipeline
+python main.py --config config.yaml
+```
+
+### Individual Components
+
+```python
+from src.data_collector import StackExchangeCollector
+from src.preprocessor import DataPreprocessor
+from src.categorizer import PostCategorizer
+from src.data_visualizer import DataVisualizer
+
+# Collect data
+collector = StackExchangeCollector()
+raw_data = collector.fetch_data()
+
+# Process and categorize
+preprocessor = DataPreprocessor()
+categorizer = PostCategorizer()
+clean_data = preprocessor.process(raw_data)
+categorized_data = categorizer.categorize(clean_data)
+
+# Generate visualizations
+visualizer = DataVisualizer()
+visualizer.generate_insights(categorized_data)
+```
+
+## 📊 Data Flow
+
+```mermaid
+graph LR
+    A[Stack Exchange API] -->|Fetch| B[Data Collection]
+    B -->|Raw Data| C[Preprocessing]
+    C -->|Clean Data| D[Categorization]
+    D -->|Organized Data| E[Visualization]
+    E -->|Insights| F[Web Interface]
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+```bash
+STACK_EXCHANGE_API_KEY=your_api_key
+MAX_REQUESTS_PER_MINUTE=30
+LOG_LEVEL=INFO
+```
+
+### Category Rules
+```yaml
+categories:
+  task_based:
+    - text_classification
+    - sentiment_analysis
+  library_based:
+    - nltk
+    - spacy
+    - transformers
+```
+
+## 📦 Output
+
+The pipeline generates:
+- 📄 JSON/CSV files with categorized posts
+- 📊 Visualization assets for web interface
+- 📈 Statistics and metadata
+- 📝 Processing logs
+
+## 🔍 Monitoring
+
+- 📊 Progress tracking via logging
+- ⚠️ Error notifications
+- 📈 Performance metrics
+- 🔄 Status updates
+
+## 🤝 Contributing
+
+See our [Contributing Guide](../CONTRIBUTING.md) for details on:
+- 🐛 Bug reporting
+- 💡 Feature suggestions
+- 🔧 Development setup
+- �� Coding standards 
+
+
+# __init__.py - /home/shubharthak/Desktop/trimester1/nlp/assingment-2/nlp-assingment-2/src/__init__.py
+"""NLP Knowledge Base Generator."""
+
+__version__ = "0.1.0" 
+

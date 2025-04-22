@@ -1,0 +1,3 @@
+Flask
+pandas
+gunicorn  # WSGI server for production 
