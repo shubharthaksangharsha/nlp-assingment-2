@@ -100,7 +100,8 @@ nlp_knowledge_base/
 
 To keep the repository lightweight, the data/ folder is compressed.
 
-[🔽 Click here to download the dataset](https://github.com/shubharthaksangharsha/nlp-assingment-2/raw/main/data.zip)
+[🔽 Click here to download the dataset](https://drive.google.com/file/d/1EPZ6mJvLAj0sJqNAWWLo8Bz90K2sSBgy/view?usp=sharing)
+
 
 After downloading, unzip with:
 ```bash
