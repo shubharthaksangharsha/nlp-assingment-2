@@ -2,7 +2,7 @@
 
 > 💫 A modern, responsive web interface for exploring NLP knowledge, built with Flask and powered by curated Stack Exchange content.
 
-[![Demo](https://img.shields.io/badge/demo-live-success.svg)](https://nlp-assingment.duckdns.org/)
+[![Demo](https://img.shields.io/badge/demo-live-success.svg)](https://nlp-assignment.duckdns.org/)
 [![Flask](https://img.shields.io/badge/flask-2.0+-blue.svg)](https://flask.palletsprojects.com/)
 
 ## ✨ Features

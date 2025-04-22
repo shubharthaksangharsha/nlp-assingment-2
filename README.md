@@ -4,9 +4,9 @@ A comprehensive collection of NLP questions, answers, and insights organized by 
 
 by [**Shubharthak**](https://shubharthaksangharsha.github.io/)
 
-[![Web Demo](web-app/static/img/top_tags.png)](https://nlp-assingment.duckdns.org//)
+[![Web Demo](web-app/static/img/top_tags.png)](https://nlp-assignment.duckdns.org/)
 
-> 🔗 [**Live Demo**](https://nlp-assingment.duckdns.org/) | [**Documentation**](src/README.md) | [**Web App**](web-app/README.md)
+> 🔗 [**Live Demo**](https://nlp-assignment.duckdns.org/) | [**Documentation**](src/README.md) | [**Web App**](web-app/README.md)
 
 ---
 
